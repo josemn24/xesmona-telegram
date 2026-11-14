@@ -7,12 +7,14 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.8",
     "@xesmona/bot-games": "workspace:*",
     "@xesmona/contracts": "workspace:*",
+    "@xesmona/telegram-auth": "workspace:*",
     "grammy": "catalog:",
     "hono": "^4.13.18",
     "zod": "catalog:"
@@ -22,6 +24,7 @@
     "@xesmona/config": "workspace:*",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

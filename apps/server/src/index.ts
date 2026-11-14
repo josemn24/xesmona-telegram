@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { createBots } from './bots';
 import { loadEnv } from './env';
+import { spikeRoutes } from './spike-routes';
 
 const env = loadEnv();
 const bots = createBots(process.env);
@@ -16,6 +17,9 @@ const app = new Hono();
 app.use(logger());
 
 app.get('/health', (c) => c.json({ ok: true, mode: env.BOT_MODE, bots: bots.map((b) => b.id) }));
+
+// Phase 0 spike: remove in Phase 1.
+app.route('/api/spike', spikeRoutes(bots.map(({ id, config }) => ({ id, token: config.TOKEN }))));
 
 // Webhooks: one route per bot. grammY validates X-Telegram-Bot-Api-Secret-Token.
 if (env.BOT_MODE === 'webhook') {
