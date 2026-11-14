@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+
+catalog:
+  typescript: ~6.0.3
+  vitest: ^5.1.0
+  '@types/node': ^24.19.2
+  zod: ^4.3.5
+  grammy: ^1.46.0
+
+allowBuilds:
+  esbuild: true

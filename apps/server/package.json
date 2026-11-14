@@ -1,0 +1,27 @@
+{
+  "name": "@xesmona/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.8",
+    "@xesmona/bot-games": "workspace:*",
+    "@xesmona/contracts": "workspace:*",
+    "grammy": "catalog:",
+    "hono": "^4.13.18",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@xesmona/config": "workspace:*",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "catalog:"
+  }
+}

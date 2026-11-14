@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "server",
+      "runtimeExecutable": "apps/server/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "apps/server/src/index.ts"],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "miniapp-games",
+      "runtimeExecutable": "apps/miniapp-games/node_modules/.bin/vite",
+      "runtimeArgs": ["apps/miniapp-games"],
+      "port": 5173,
+      "url": "http://localhost:5173",
+      "env": {
+        "SERVER_URL": "http://localhost:3000"
+      }
+    }
+  ]
+}

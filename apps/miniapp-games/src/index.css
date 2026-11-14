@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+/* Colores del tema de Telegram (variables inyectadas por bindCssVars del SDK). */
+@theme inline {
+  --color-tg-bg: var(--tg-theme-bg-color, #ffffff);
+  --color-tg-text: var(--tg-theme-text-color, #000000);
+  --color-tg-hint: var(--tg-theme-hint-color, #707579);
+  --color-tg-link: var(--tg-theme-link-color, #3390ec);
+  --color-tg-button: var(--tg-theme-button-color, #3390ec);
+  --color-tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --color-tg-secondary: var(--tg-theme-secondary-bg-color, #f4f4f5);
+}
+
+html,
+body {
+  background: var(--color-tg-bg);
+  color: var(--color-tg-text);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}

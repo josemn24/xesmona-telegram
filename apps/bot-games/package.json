@@ -1,0 +1,21 @@
+{
+  "name": "@xesmona/bot-games",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@xesmona/contracts": "workspace:*",
+    "grammy": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@xesmona/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

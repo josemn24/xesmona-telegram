@@ -1,0 +1,24 @@
+{
+  "name": "@xesmona/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "grammy": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@xesmona/config": "workspace:*",
+    "grammy": "catalog:",
+    "typescript": "catalog:"
+  }
+}
