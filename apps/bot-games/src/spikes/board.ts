@@ -39,6 +39,10 @@ export function newGameId(): string {
   return randomUUID().replaceAll('-', '');
 }
 
+/** Reserved player id for the bot opponent: no Telegram user has id 0. */
+export const BOT_PLAYER_ID = 0;
+export const BOT_PLAYER_NAME = '🤖 Bot';
+
 export function createGame(id: string, creatorId: number, creatorName: string): SpikeGame {
   return {
     id,
@@ -49,6 +53,22 @@ export function createGame(id: string, creatorId: number, creatorName: string): 
     version: 0,
     round: 0,
   };
+}
+
+/** Vs bot: the human plays X (seat 0) and the bot plays O (seat 1). */
+export function createVsBotGame(id: string, userId: number, name: string): SpikeGame {
+  const game = createGame(id, userId, name);
+  return { ...game, players: [userId, BOT_PLAYER_ID], playerNames: [name, BOT_PLAYER_NAME] };
+}
+
+export const isVsBot = (game: SpikeGame) => game.players[1] === BOT_PLAYER_ID;
+
+/** Easy level: any empty cell. */
+export function randomMove(cells: readonly Cell[], rng: () => number = Math.random): number {
+  const empty = cells.flatMap((cell, i) => (cell ? [] : [i]));
+  const pick = empty[Math.floor(rng() * empty.length)];
+  if (pick === undefined) throw new Error('No empty cells');
+  return pick;
 }
 
 export function winner(cells: readonly Cell[]): Mark | 'draw' | null {
@@ -98,8 +118,34 @@ export function applyMove(
   };
 }
 
+/**
+ * Applies the human move and, in vs-bot games, the bot's reply, so the message is
+ * edited once per turn.
+ */
+export function playTurn(
+  game: SpikeGame,
+  userId: number,
+  cell: number,
+  version: number,
+  rng: () => number = Math.random,
+): MoveResult {
+  const human = applyMove(game, userId, cell, version);
+  if (!human.ok || !isVsBot(human.game) || winner(human.game.cells)) return human;
+  const next = human.game;
+  return applyMove(next, BOT_PLAYER_ID, randomMove(next.cells, rng), next.version);
+}
+
 export function rematch(game: SpikeGame): SpikeGame {
-  // Swap sides so the other player starts.
+  // Vs bot: the human stays X. Two players: swap sides so the other player starts.
+  if (isVsBot(game)) {
+    return {
+      ...game,
+      cells: Array<Cell>(9).fill(null),
+      turn: 0,
+      version: game.version + 1,
+      round: game.round + 1,
+    };
+  }
   return {
     ...game,
     players: [game.players[1] ?? game.players[0], game.players[0]],

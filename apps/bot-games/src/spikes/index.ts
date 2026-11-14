@@ -2,16 +2,26 @@
 // Handlers to test Telegram behaviour in real chats. Results go in docs/spikes/phase-0-results.md.
 import type { BotEnv } from '@xesmona/contracts';
 import { GrammyError, InlineKeyboard, type Bot, type Context } from 'grammy';
-import { applyMove, createGame, games, join, newGameId, rematch, type SpikeGame } from './board';
+import {
+  createGame,
+  createVsBotGame,
+  games,
+  join,
+  newGameId,
+  playTurn,
+  rematch,
+  type SpikeGame,
+} from './board';
 import { boardKeyboard, boardText, callbackData, invitationKeyboard } from './keyboard';
 
 export const spikeHelp = [
   'Phase 0 spikes:',
   '/spike_ttt: tic-tac-toe in this chat',
+  '/spike_ttt bot: play against the bot (Easy)',
   '/spike_app <param>: Mini App direct link buttons',
   '/spike_webapp <https-url>: try a web_app button here',
   '/spike_burst <n>: edit one message n times (rate limits)',
-  '@<bot> in any chat: inline tic-tac-toe; "@<bot> burst" for the inline burst test',
+  '@<bot> in any chat: inline tic-tac-toe; "@<bot> bot" vs the bot; "@<bot> burst" for rate limits',
 ].join('\n');
 
 const REFUSALS = {
@@ -32,7 +42,8 @@ function logOrigin(label: string, ctx: Context) {
   const msg = ctx.msg;
   console.log(`[spike] ${label}`, {
     from: ctx.from?.id,
-    chatType: ctx.chat?.type,
+    // Inline queries have no `chat`, but Telegram says where they were typed in `chat_type`.
+    chatType: ctx.chat?.type ?? ctx.inlineQuery?.chat_type,
     chatId: ctx.chat?.id,
     threadId: msg?.message_thread_id,
     isTopicMessage: msg?.is_topic_message,
@@ -92,6 +103,15 @@ export function registerSpikes(bot: Bot, config: BotEnv) {
   bot.command('spike_ttt', async (ctx) => {
     logOrigin('spike_ttt', ctx);
     if (!ctx.from) return;
+    if (ctx.match.trim().toLowerCase() === 'bot') {
+      const game = createVsBotGame(newGameId(), ctx.from.id, displayName(ctx));
+      games.set(game.id, game);
+      await ctx.reply(boardText(game), {
+        reply_markup: boardKeyboard(game),
+        ...threadOptions(ctx),
+      });
+      return;
+    }
     const game = createGame(newGameId(), ctx.from.id, displayName(ctx));
     games.set(game.id, game);
     await ctx.reply(`${displayName(ctx)} wants to play tic-tac-toe. Who's in?`, {
@@ -120,8 +140,27 @@ export function registerSpikes(bot: Bot, config: BotEnv) {
       return;
     }
 
-    // The game is created when results are shown: callbacks may arrive even if
+    // Games are created when results are shown: callbacks may arrive even if
     // chosen_inline_result feedback is disabled in BotFather.
+    if (/^bot/i.test(ctx.inlineQuery.query)) {
+      const game = createVsBotGame(newGameId(), ctx.from.id, displayName(ctx));
+      games.set(game.id, game);
+      await ctx.answerInlineQuery(
+        [
+          {
+            type: 'article',
+            id: game.id,
+            title: 'Tic-tac-toe vs bot (spike)',
+            description: 'Play against the bot (Easy) right here',
+            input_message_content: { message_text: boardText(game) },
+            reply_markup: boardKeyboard(game),
+          },
+        ],
+        { cache_time: 0, is_personal: true },
+      );
+      return;
+    }
+
     const game = createGame(newGameId(), ctx.from.id, displayName(ctx));
     games.set(game.id, game);
     await ctx.answerInlineQuery(
@@ -165,7 +204,8 @@ export function registerSpikes(bot: Bot, config: BotEnv) {
     const game = games.get(ctx.match[1]!);
     if (!game) return ctx.answerCallbackQuery({ text: 'Game not found (server restarted?)' });
     // Synchronous check-and-set: safe against simultaneous taps in one process (G4).
-    const result = applyMove(game, ctx.from.id, Number(ctx.match[2]), Number(ctx.match[3]));
+    // Vs bot, the bot's reply is applied too, so there's one edit per turn.
+    const result = playTurn(game, ctx.from.id, Number(ctx.match[2]), Number(ctx.match[3]));
     if (!result.ok) {
       console.log(`[spike] move refused: ${result.reason}`);
       // Alert (modal) for outsiders, toast for players (G3).
@@ -176,6 +216,7 @@ export function registerSpikes(bot: Bot, config: BotEnv) {
     }
     games.set(game.id, result.game);
     await ctx.answerCallbackQuery();
+    console.log(`[spike] edit for version ${result.game.version}`);
     await showBoard(ctx, result.game);
   });
 

@@ -1,6 +1,18 @@
 // Phase 0 spike: remove in Phase 1.
 import { describe, expect, it } from 'vitest';
-import { applyMove, createGame, join, newGameId, rematch, winner, type SpikeGame } from './board';
+import {
+  BOT_PLAYER_ID,
+  applyMove,
+  createGame,
+  createVsBotGame,
+  join,
+  newGameId,
+  playTurn,
+  randomMove,
+  rematch,
+  winner,
+  type SpikeGame,
+} from './board';
 import {
   CALLBACK_DATA_MAX_BYTES,
   boardKeyboard,
@@ -80,6 +92,52 @@ describe('spike board', () => {
     expect(next.players).toEqual([B, A]);
     expect(next.cells.every((c) => c === null)).toBe(true);
     expect(next.round).toBe(1);
+  });
+});
+
+describe('spike vs bot', () => {
+  const vsBot = () => createVsBotGame(newGameId(), A, 'A');
+  const first = () => 0; // rng that always picks the first empty cell
+
+  it('the bot replies in the same turn with one version per move', () => {
+    const game = vsBot();
+    const result = playTurn(game, A, 4, game.version, first);
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.game.cells[4]).toBe('X');
+    expect(result.game.cells[0]).toBe('O');
+    expect(result.game.turn).toBe(0);
+    expect(result.game.version).toBe(game.version + 2);
+  });
+
+  it('the bot never plays an occupied cell', () => {
+    const cells = ['X', 'O', 'X', null, 'O', null, 'X', null, null] as const;
+    for (const r of [0, 0.3, 0.6, 0.99]) {
+      expect(cells[randomMove(cells, () => r)]).toBeNull();
+    }
+  });
+
+  it('a winning human move gets no bot reply', () => {
+    const game: SpikeGame = {
+      ...vsBot(),
+      cells: ['X', 'X', null, 'O', 'O', null, null, null, null],
+    };
+    const result = playTurn(game, A, 2, game.version, first);
+    if (!result.ok) throw new Error(result.reason);
+    expect(winner(result.game.cells)).toBe('X');
+    expect(result.game.version).toBe(game.version + 1);
+  });
+
+  it('nobody can join or play as the bot', () => {
+    const game = vsBot();
+    expect(join(game, 3, 'C')).toEqual({ ok: false, reason: 'full' });
+    expect(playTurn(game, 3, 0, game.version)).toMatchObject({ reason: 'not_player' });
+    expect(game.players[1]).toBe(BOT_PLAYER_ID);
+  });
+
+  it('rematch keeps the human as X', () => {
+    const next = rematch(vsBot());
+    expect(next.players).toEqual([A, BOT_PLAYER_ID]);
+    expect(next.turn).toBe(0);
   });
 });
 

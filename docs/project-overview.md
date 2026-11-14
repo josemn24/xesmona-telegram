@@ -5,14 +5,14 @@
 Monorepo (pnpm + Turborepo) for building **several Xesmona Telegram bots** that share game
 engines, Mini Apps and common services. Each bot is a small app that combines the pieces it
 needs. The first bot is a **games** bot: it starts with **Tic-tac-toe** played in the chat
-itself, continues with **Four in a row** as the first Mini App, and then comes **Walls**, the
+itself (against a friend or against the bot), continues with **Four in a row** as the first Mini App, and then comes **Walls**, the
 first game with a real engine of its own.
 
 ## Games
 
 | Game          | Where it's played         | What it's for                                                                                                                         |
 | ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Tic-tac-toe   | Chat: 3×3 inline keyboard | MVP. Validates the bot, persistence, move versioning and concurrency without a Mini App.                                              |
+| Tic-tac-toe   | Chat: 3×3 inline keyboard | MVP, also playable vs bot. Validates the bot, persistence, move versioning and concurrency without a Mini App.                        |
 | Four in a row | Mini App                  | Trivial engine (7×6 with gravity): validates the full Mini App pipeline (`initData` → JWT → Realtime). First version of `GameEngine`. |
 | Walls         | Mini App                  | Pawn race and wall placement. Non-trivial engine; settles `GameEngine`.                                                               |
 | Dice          | Mini App                  | Dice game with its own name and design (not "Barricade", a registered trademark).                                                     |
@@ -21,6 +21,21 @@ first game with a real engine of its own.
 player moves their pawn to the opposite side or places two-square walls to slow down the
 opponent. A wall can never cut off a player's last path to their goal (checked with a path
 search on every placement). 2 players first; 4 players later.
+
+## Play vs bot
+
+Every game can be played against the bot, so nobody needs a second person to play, in any chat
+(including Saved Messages through inline mode). Decision in
+[ADR 0005](adr/0005-play-vs-bot.md).
+
+- **Levels:** Easy (random moves), Normal (wins when it can, blocks your win, otherwise
+  random), Hard (best possible play).
+- **The bot is a player** of kind `bot` in the game, so vs-bot games go through the same
+  validation, versioning and persistence as two-player games.
+- **One edit per turn:** the human move and the bot's reply are saved together and the message
+  is edited once.
+- **No rankings:** vs-bot games don't count towards rankings.
+- **Invitations:** the creator of an invitation can switch to "Play vs bot" if nobody joins.
 
 Use generic or original game names: avoid trademarks such as "Connect Four", "Quoridor" or
 "Barricade".
@@ -68,6 +83,10 @@ Use generic or original game names: avoid trademarks such as "Connect Four", "Qu
 5. When the game ends, the message shows the result and a rematch button. In inline mode,
    callbacks arrive with `inline_message_id` and the bot doesn't need to be in the chat.
 
+Vs bot: the creator taps "Play vs bot" on the invitation (or picks "Play vs bot" in inline
+mode), chooses a level, and the board appears. After each move the server computes the bot's
+reply and saves both moves before editing the message once.
+
 ### Mini App games (Four in a row, Walls)
 
 1. `@bot` in any chat (inline mode) or `/play` in a group.
@@ -83,12 +102,14 @@ Use generic or original game names: avoid trademarks such as "Connect Four", "Qu
 0. **Technical tests:** inline keyboards and message edits in groups and in inline mode; direct
    link to the Mini App in groups. Outcome: ADRs.
 1. **Tic-tac-toe in the chat, end to end:** `/play`, inline mode, moves persisted with
-   versions, rematch.
+   versions, rematch, and play vs bot (3 levels).
 2. **Four in a row as a Mini App:** full pipeline (`initData` → JWT → private channel with RLS
-   → Realtime), result posted in the group. First version of `GameEngine`.
+   → Realtime), result posted in the group, and play vs bot (simple search). First version of
+   `GameEngine`.
 3. **Reliability:** Telegram limits when editing messages, simultaneous taps, reconnection in
    the Mini App, abandoned and expired games, queues.
 4. **Walls for 2 players:** wall placement, path validation, jumps. Settles `GameEngine`.
+   Walls vs bot comes after the 2-player version works.
 5. **Second bot or module (e.g. polls):** the module SDK is extracted.
 6. **Walls for 4 players, original dice game and rankings.**
 
