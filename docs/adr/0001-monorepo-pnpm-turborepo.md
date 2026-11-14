@@ -1,19 +1,19 @@
-# ADR 0001: Monorepo con pnpm y Turborepo
+# ADR 0001: Monorepo with pnpm and Turborepo
 
-- Estado: aceptada (2026-11-14)
+- Status: accepted (2026-11-14)
 
-## Contexto
+## Context
 
-Habrá varios bots y Mini Apps que comparten contratos, motores de juego y utilidades.
+There will be several bots and Mini Apps sharing contracts, game engines and utilities.
 
-## Decisión
+## Decision
 
-Un único repositorio con pnpm workspaces (`apps/*`, `packages/*`) y Turborepo para orquestar
-`typecheck`, `test` y `build`. Versiones compartidas mediante el `catalog` de pnpm. Los paquetes
-internos se consumen como fuente TypeScript (sin build propio); las apps los empaquetan.
+A single repository with pnpm workspaces (`apps/*`, `packages/*`) and Turborepo to orchestrate
+`typecheck`, `test` and `build`. Shared versions through the pnpm `catalog`. Internal packages
+are consumed as TypeScript source (no build of their own); the apps bundle them.
 
-## Consecuencias
+## Consequences
 
-- Un cambio en un contrato se valida en todos los consumidores en el mismo PR.
-- El servidor debe empaquetar `@xesmona/*` (`noExternal` en tsup).
-- Si un paquete se publica fuera del repo, necesitará su propio build.
+- A change to a contract is validated against every consumer in the same PR.
+- The server must bundle `@xesmona/*` (`noExternal` in tsup).
+- If a package is ever published outside the repo, it will need its own build.

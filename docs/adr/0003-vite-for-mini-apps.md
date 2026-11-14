@@ -1,18 +1,19 @@
-# ADR 0003: Vite + React para las Mini Apps (no Next.js)
+# ADR 0003: Vite + React for the Mini Apps (not Next.js)
 
-- Estado: aceptada (2026-11-14)
+- Status: accepted (2026-11-14)
 
-## Contexto
+## Context
 
-Las Mini Apps se ejecutan dentro del WebView de Telegram, se renderizan en el cliente y no
-necesitan SEO. El rendimiento de arranque en móviles modestos es crítico.
+Mini Apps run inside Telegram's WebView, render on the client and don't need SEO. Startup
+performance on modest phones is critical.
 
-## Decisión
+## Decision
 
-Cada Mini App es una SPA de Vite + React + Tailwind, servida como estáticos por `apps/server`.
-Animaciones con Motion y tableros en SVG; Phaser o PixiJS solo si un juego lo exige.
+Each Mini App is a Vite + React + Tailwind SPA, served as static files by `apps/server`.
+Animations with Motion and boards in SVG; Phaser or PixiJS only if a game requires it.
 
-## Consecuencias
+## Consequences
 
-- Menos JS en el arranque y sin frontera servidor/cliente que gestionar.
-- Si en el futuro hace falta un sitio público o dashboard con SSR, será otra app (p. ej. Next.js).
+- Less JS at startup and no server/client boundary to manage.
+- If a public site or SSR dashboard is needed in the future, it will be a separate app (e.g.
+  Next.js).

@@ -2,11 +2,11 @@ import type { Bot } from 'grammy';
 import type { BotEnv } from './env';
 
 /**
- * Definición declarativa de un bot. Cada bot de Xesmona vive en apps/bot-<id> y
- * exporta una de estas; el servidor la registra y gestiona su ciclo de vida.
+ * Declarative bot definition. Each Xesmona bot lives in apps/bot-<id> and exports
+ * one of these; the server registers it and manages its lifecycle.
  */
 export interface BotDefinition {
-  /** Identificador estable: ruta del webhook (/webhook/<id>) y prefijo de env (BOT_<ID>_). */
+  /** Stable identifier: webhook route (/webhook/<id>) and env prefix (BOT_<ID>_). */
   id: string;
   description: string;
   setup(bot: Bot, config: BotEnv): void;
@@ -14,7 +14,9 @@ export interface BotDefinition {
 
 export function defineBot(definition: BotDefinition): BotDefinition {
   if (!/^[a-z][a-z0-9-]*$/.test(definition.id)) {
-    throw new Error(`Id de bot inválido: "${definition.id}" (usa minúsculas, números y guiones)`);
+    throw new Error(
+      `Invalid bot id: "${definition.id}" (use lowercase letters, digits and hyphens)`,
+    );
   }
   return definition;
 }

@@ -2,11 +2,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
 /**
- * Validación de `initData` de Telegram Mini Apps.
+ * Validation of Telegram Mini Apps `initData`.
  * https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
  *
- * Nunca uses `initDataUnsafe` del cliente para autorizar: valida siempre la cadena
- * original en el servidor con el token del bot que abrió la Mini App.
+ * Never use the client's `initDataUnsafe` for authorization: always validate the
+ * original string on the server with the token of the bot that opened the Mini App.
  */
 
 export const telegramUserSchema = z.object({
@@ -45,13 +45,13 @@ export class InitDataError extends Error {
 }
 
 export interface ValidateInitDataOptions {
-  /** Antigüedad máxima aceptada de `auth_date`, en segundos. Por defecto 1 hora. */
+  /** Maximum accepted age of `auth_date`, in seconds. Defaults to 1 hour. */
   maxAgeSeconds?: number;
-  /** Reloj inyectable para tests. */
+  /** Injectable clock for tests. */
   now?: Date;
 }
 
-/** Calcula el hash esperado de un conjunto de campos de initData (sin `hash`). */
+/** Computes the expected hash for a set of initData fields (excluding `hash`). */
 export function computeInitDataHash(params: URLSearchParams, botToken: string): string {
   const dataCheckString = [...params.entries()]
     .filter(([key]) => key !== 'hash')
@@ -69,30 +69,30 @@ export function validateInitData(
 ): ValidatedInitData {
   const params = new URLSearchParams(initData);
   const hash = params.get('hash');
-  if (!hash) throw new InitDataError('missing_hash', 'initData no contiene hash');
+  if (!hash) throw new InitDataError('missing_hash', 'initData has no hash');
 
   const expected = Buffer.from(computeInitDataHash(params, botToken), 'hex');
   const received = Buffer.from(hash, 'hex');
   if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
-    throw new InitDataError('invalid_hash', 'Firma de initData inválida');
+    throw new InitDataError('invalid_hash', 'Invalid initData signature');
   }
 
   const authDateSeconds = Number(params.get('auth_date'));
   if (!Number.isInteger(authDateSeconds) || authDateSeconds <= 0) {
-    throw new InitDataError('invalid_payload', 'auth_date ausente o inválido');
+    throw new InitDataError('invalid_payload', 'auth_date missing or invalid');
   }
   if (now.getTime() / 1000 - authDateSeconds > maxAgeSeconds) {
-    throw new InitDataError('expired', 'initData caducado');
+    throw new InitDataError('expired', 'initData expired');
   }
 
   let rawUser: unknown;
   try {
     rawUser = JSON.parse(params.get('user') ?? 'null');
   } catch {
-    throw new InitDataError('invalid_payload', 'Campo user no es JSON válido');
+    throw new InitDataError('invalid_payload', 'user field is not valid JSON');
   }
   const user = telegramUserSchema.safeParse(rawUser);
-  if (!user.success) throw new InitDataError('invalid_payload', 'Campo user ausente o inválido');
+  if (!user.success) throw new InitDataError('invalid_payload', 'user field missing or invalid');
 
   return {
     user: user.data,

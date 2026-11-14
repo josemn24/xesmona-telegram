@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Colores del tema de Telegram (variables inyectadas por bindCssVars del SDK). */
+/* Telegram theme colors (variables injected by the SDK's bindCssVars). */
 @theme inline {
   --color-tg-bg: var(--tg-theme-bg-color, #ffffff);
   --color-tg-text: var(--tg-theme-text-color, #000000);

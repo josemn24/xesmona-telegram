@@ -7,6 +7,6 @@ export default defineConfig({
   target: 'node24',
   clean: true,
   sourcemap: true,
-  // Los paquetes internos se consumen como fuente TS: hay que empaquetarlos.
+  // Internal packages are consumed as TS source, so they must be bundled.
   noExternal: [/^@xesmona\//],
 });

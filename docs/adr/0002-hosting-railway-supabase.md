@@ -1,20 +1,20 @@
-# ADR 0002: Railway + Supabase como hosting inicial
+# ADR 0002: Railway + Supabase as initial hosting
 
-- Estado: aceptada (2026-11-14)
+- Status: accepted (2026-11-14)
 
-## Contexto
+## Context
 
-La propuesta inicial usaba Vercel + Railway + Supabase: tres proveedores, tres entornos y nueve
-combinaciones de secretos y despliegues antes de tener usuarios.
+The initial proposal used Vercel + Railway + Supabase: three providers, three environments and
+nine combinations of secrets and deployments before having any users.
 
-## Decisión
+## Decision
 
-- **Railway:** un único servicio Node (`apps/server`) con la API Hono, los webhooks de todos los
-  bots, los workers y los estáticos de las Mini Apps (`/apps/<nombre>/`).
-- **Supabase Cloud (UE):** Postgres, Realtime, Storage y Queues.
+- **Railway:** a single Node service (`apps/server`) with the Hono API, the webhooks of all
+  bots, the workers and the Mini Apps' static files (`/apps/<name>/`).
+- **Supabase Cloud (EU):** Postgres, Realtime, Storage and Queues.
 
-## Consecuencias
+## Consequences
 
-- Un proceso persistente: sin límites de duración de funciones serverless para colas y reintentos.
-- Un bot o worker con mucha carga puede separarse en otro servicio de Railway sin cambiar código.
-- Las Mini Apps podrían moverse a un CDN si el tráfico lo justifica.
+- One long-running process: no serverless function duration limits for queues and retries.
+- A bot or worker under heavy load can be moved to its own Railway service without code changes.
+- The Mini Apps could move to a CDN if traffic justifies it.

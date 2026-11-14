@@ -10,8 +10,8 @@ export interface SignInitDataInput {
 }
 
 /**
- * Genera un initData firmado como lo haría Telegram. Solo para tests y desarrollo
- * local (Playwright, Mini App fuera de Telegram). Nunca en producción.
+ * Generates signed initData the way Telegram would. Only for tests and local
+ * development (Playwright, Mini App outside Telegram). Never in production.
  */
 export function signInitData(input: SignInitDataInput, botToken: string): string {
   const params = new URLSearchParams();

@@ -2,7 +2,7 @@ import { gamesBot } from '@xesmona/bot-games';
 import { botEnvPrefix, readBotEnv, type BotDefinition, type BotEnv } from '@xesmona/contracts';
 import { Bot } from 'grammy';
 
-/** Registro estático de bots. Añade aquí cada nuevo apps/bot-<id>. */
+/** Static bot registry. Add each new apps/bot-<id> here. */
 const definitions: BotDefinition[] = [gamesBot];
 
 export interface RunningBot {
@@ -16,7 +16,7 @@ export function createBots(env: Record<string, string | undefined>): RunningBot[
   for (const definition of definitions) {
     const prefix = botEnvPrefix(definition.id);
     if (!env[`${prefix}TOKEN`]) {
-      console.warn(`[bots] ${prefix}TOKEN no definido: el bot "${definition.id}" no se inicia`);
+      console.warn(`[bots] ${prefix}TOKEN not set: bot "${definition.id}" will not start`);
       continue;
     }
     const config = readBotEnv(definition.id, env);

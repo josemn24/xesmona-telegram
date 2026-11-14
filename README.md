@@ -1,53 +1,54 @@
 # xesmona-telegram
 
-Bots de Telegram y Mini Apps de Xesmona. Visión y arquitectura en
+Xesmona Telegram bots and Mini Apps. Vision and architecture in
 [docs/project-overview.md](docs/project-overview.md).
 
-## Requisitos
+## Requirements
 
-- Node 24 LTS (`.nvmrc`) y corepack actualizado (`npm i -g corepack@latest` si falla la firma de pnpm).
-- Docker (para Supabase local) y [Supabase CLI](https://supabase.com/docs/guides/cli).
-- Un bot de **pruebas** creado con [@BotFather](https://t.me/BotFather) (no uses el de producción).
+- Node 24 LTS (`.nvmrc`) and an up-to-date corepack (`npm i -g corepack@latest` if the pnpm
+  signature check fails).
+- Docker (for local Supabase) and the [Supabase CLI](https://supabase.com/docs/guides/cli).
+- A **test** bot created with [@BotFather](https://t.me/BotFather) (don't use the production one).
 
-## Puesta en marcha
+## Getting started
 
 ```bash
 corepack enable
 pnpm install
-cp .env.example .env   # rellena BOT_GAMES_TOKEN
-pnpm db:start          # opcional: Supabase local
+cp .env.example .env   # fill in BOT_GAMES_TOKEN
+pnpm db:start          # optional: local Supabase
 pnpm dev
 ```
 
-- Servidor: http://localhost:3000/health
-- Mini App: http://localhost:5173/apps/games/ (fuera de Telegram se simula el entorno)
-- Escribe `/ping` al bot en Telegram: responde `pong`.
+- Server: http://localhost:3000/health
+- Mini App: http://localhost:5173/apps/games/ (outside Telegram the environment is mocked)
+- Send `/ping` to the bot in Telegram: it replies `pong`.
 
-## Probar la Mini App dentro de Telegram
+## Testing the Mini App inside Telegram
 
-Telegram exige HTTPS. Expón Vite con un túnel y registra la URL en BotFather:
+Telegram requires HTTPS. Expose Vite through a tunnel and register the URL in BotFather:
 
 ```bash
 cloudflared tunnel --url http://localhost:5173
 ```
 
-1. En @BotFather: `/newapp`, elige el bot y usa `https://<túnel>/apps/games/` como URL.
-2. Pon el direct link resultante (`https://t.me/<bot>/<app>`) en `BOT_GAMES_MINIAPP_URL`.
-3. `/start` al bot y pulsa «Abrir juegos».
+1. In @BotFather: `/newapp`, pick the bot and use `https://<tunnel>/apps/games/` as the URL.
+2. Put the resulting direct link (`https://t.me/<bot>/<app>`) in `BOT_GAMES_MINIAPP_URL`.
+3. Send `/start` to the bot and tap "Open games".
 
 ## Scripts
 
-| Script                      | Qué hace                                      |
+| Script                      | What it does                                  |
 | --------------------------- | --------------------------------------------- |
-| `pnpm dev`                  | Servidor + Mini App en modo desarrollo        |
-| `pnpm check`                | Lint, typecheck, tests y build (igual que CI) |
-| `pnpm format`               | Formatea con Prettier                         |
-| `pnpm db:start` / `db:stop` | Arranca/para Supabase local                   |
-| `pnpm db:reset`             | Recrea la BD aplicando migraciones y seed     |
-| `pnpm db:types`             | Genera tipos TS del esquema                   |
+| `pnpm dev`                  | Server + Mini App in development mode         |
+| `pnpm check`                | Lint, typecheck, tests and build (same as CI) |
+| `pnpm format`               | Formats with Prettier                         |
+| `pnpm db:start` / `db:stop` | Starts/stops local Supabase                   |
+| `pnpm db:reset`             | Recreates the DB applying migrations and seed |
+| `pnpm db:types`             | Generates TS types from the schema            |
 
-## Despliegue (pendiente)
+## Deployment (pending)
 
 Railway: build `pnpm install --frozen-lockfile && pnpm build`, start
-`pnpm --filter @xesmona/server start`, con `BOT_MODE=webhook`, `PUBLIC_URL` y
-`BOT_<ID>_WEBHOOK_SECRET` definidos. Supabase Cloud en región UE.
+`pnpm --filter @xesmona/server start`, with `BOT_MODE=webhook`, `PUBLIC_URL` and
+`BOT_<ID>_WEBHOOK_SECRET` set. Supabase Cloud in an EU region.

@@ -1,35 +1,36 @@
 # xesmona-telegram
 
-Monorepo de bots de Telegram y Mini Apps de Xesmona. Visión, stack y roadmap en
-[docs/project-overview.md](docs/project-overview.md); decisiones en [docs/adr/](docs/adr/).
+Monorepo of Xesmona Telegram bots and Mini Apps. Vision, stack and roadmap in
+[docs/project-overview.md](docs/project-overview.md); decisions in [docs/adr/](docs/adr/).
 
-## Comandos
+## Commands
 
-- Node 24 (`.nvmrc`) y pnpm por corepack (`packageManager` en package.json).
-- `pnpm dev`: servidor (Hono + bots en long polling, :3000) y Mini App (Vite, :5173/apps/games/).
-- `pnpm check`: lint + typecheck + test + build (lo mismo que la CI).
-- `pnpm --filter <paquete> <script>`: un solo workspace, p. ej. `pnpm --filter @xesmona/telegram-auth test`.
-- `pnpm db:start | db:reset | db:types`: Supabase local (requiere Docker).
+- Node 24 (`.nvmrc`) and pnpm via corepack (`packageManager` in package.json).
+- `pnpm dev`: server (Hono + bots in long polling, :3000) and Mini App (Vite, :5173/apps/games/).
+- `pnpm check`: lint + typecheck + test + build (same as CI).
+- `pnpm --filter <package> <script>`: a single workspace, e.g. `pnpm --filter @xesmona/telegram-auth test`.
+- `pnpm db:start | db:reset | db:types`: local Supabase (requires Docker).
 - `pnpm format`: Prettier.
 
-## Estructura
+## Structure
 
-- `apps/server`: único proceso Node. API Hono, webhooks `/webhook/<botId>`, registro de bots
-  (`src/bots.ts`), estáticos de Mini Apps en `/apps/<nombre>/`.
-- `apps/bot-<id>`: definición de cada bot (`defineBot`); no arranca procesos.
-- `apps/miniapp-<nombre>`: SPA Vite + React + Tailwind + `@tma.js/sdk-react`.
-- `packages/contracts`: esquemas Zod de entorno, `BotDefinition` y contratos compartidos.
-- `packages/telegram-auth`: validación de `initData` (+ `./testing` con `signInitData`).
-- `packages/config`: tsconfig compartidos.
-- `supabase/`: migraciones SQL versionadas y seed.
+- `apps/server`: the only Node process. Hono API, `/webhook/<botId>` webhooks, bot registry
+  (`src/bots.ts`), Mini App static files at `/apps/<name>/`.
+- `apps/bot-<id>`: each bot's definition (`defineBot`); starts no processes.
+- `apps/miniapp-<name>`: Vite + React + Tailwind + `@tma.js/sdk-react` SPA.
+- `packages/contracts`: Zod env schemas, `BotDefinition` and shared contracts.
+- `packages/telegram-auth`: `initData` validation (+ `./testing` with `signInitData`).
+- `packages/config`: shared tsconfigs.
+- `supabase/`: versioned SQL migrations and seed.
 
-## Reglas
+## Rules
 
-- El servidor es la autoridad: nunca confíes en el cliente ni en `initDataUnsafe`.
-- Los motores de juego son funciones puras sin dependencias de React, grammY ni Supabase.
-- No crees abstracciones ni paquetes nuevos hasta que haya un segundo caso real.
-- En grupos, la Mini App se abre con botones `url` + direct link, no con botones `web_app`.
-- Variables de un bot con prefijo `BOT_<ID>_`; documenta cualquier variable nueva en `.env.example`.
-- Secretos solo en servidor y nunca en git.
-- Imports relativos sin extensión; paquetes internos como `@xesmona/<nombre>`.
-- Textos de usuario en español por ahora; cuando haya i18n, se usará `language_code` de Telegram.
+- The server is the authority: never trust the client or `initDataUnsafe`.
+- Game engines are pure functions with no dependency on React, grammY or Supabase.
+- Don't create new abstractions or packages until there is a second real case.
+- In groups, the Mini App opens with `url` buttons + direct link, not `web_app` buttons.
+- Bot variables use the `BOT_<ID>_` prefix; document any new variable in `.env.example`.
+- Secrets only on the server and never in git.
+- Relative imports without extension; internal packages as `@xesmona/<name>`.
+- Code, comments, logs and docs in English.
+- User-facing texts in English for now; when i18n arrives, use Telegram's `language_code`.

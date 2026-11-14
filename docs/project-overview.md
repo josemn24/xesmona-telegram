@@ -1,94 +1,95 @@
-# xesmona-telegram: visión general
+# xesmona-telegram: overview
 
-## Qué es
+## What it is
 
-Monorepo (pnpm + Turborepo) para crear **varios bots de Telegram de Xesmona** que comparten
-motores de juego, Mini Apps y servicios comunes. Cada bot es una app pequeña que combina las
-piezas que necesita. El primer bot es de **juegos**: empieza con **tres en raya** jugado en el
-propio chat, sigue con **4 en raya** como primera Mini App y después llega **Muros**, el primer
-juego con motor propio de verdad.
+Monorepo (pnpm + Turborepo) for building **several Xesmona Telegram bots** that share game
+engines, Mini Apps and common services. Each bot is a small app that combines the pieces it
+needs. The first bot is a **games** bot: it starts with **Tic-tac-toe** played in the chat
+itself, continues with **Four in a row** as the first Mini App, and then comes **Walls**, the
+first game with a real engine of its own.
 
-## Juegos
+## Games
 
-| Juego        | Dónde se juega              | Para qué sirve                                                                                                                           |
-| ------------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Tres en raya | Chat: teclado inline de 3×3 | MVP. Valida bot, persistencia, versiones de jugada y concurrencia sin Mini App.                                                          |
-| 4 en raya    | Mini App                    | Motor trivial (7×6 con gravedad): valida la tubería completa de Mini App (`initData` → JWT → Realtime). Primera versión de `GameEngine`. |
-| Muros        | Mini App                    | Carrera de peones y colocación de muros. Motor no trivial; consolida `GameEngine`.                                                       |
-| Dados        | Mini App                    | Juego de dados con nombre y diseño propios (no «Barricade», marca registrada).                                                           |
+| Game          | Where it's played         | What it's for                                                                                                                         |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Tic-tac-toe   | Chat: 3×3 inline keyboard | MVP. Validates the bot, persistence, move versioning and concurrency without a Mini App.                                              |
+| Four in a row | Mini App                  | Trivial engine (7×6 with gravity): validates the full Mini App pipeline (`initData` → JWT → Realtime). First version of `GameEngine`. |
+| Walls         | Mini App                  | Pawn race and wall placement. Non-trivial engine; settles `GameEngine`.                                                               |
+| Dice          | Mini App                  | Dice game with its own name and design (not "Barricade", a registered trademark).                                                     |
 
-**Muros** (nombre y diseño propios; no usar «Quoridor», marca registrada): tablero de 9×9; cada
-jugador lleva su peón al lado opuesto o coloca muros que ocupan dos casillas para frenar al
-rival. Un muro nunca puede cortar el último camino de un jugador a su meta (se comprueba con una
-búsqueda de caminos en cada colocación). Primero 2 jugadores; 4 jugadores más adelante.
+**Walls** (own name and design; don't use "Quoridor", a registered trademark): 9×9 board; each
+player moves their pawn to the opposite side or places two-square walls to slow down the
+opponent. A wall can never cut off a player's last path to their goal (checked with a path
+search on every placement). 2 players first; 4 players later.
 
-Nombres de juego genéricos o propios: evita marcas como «Conecta 4», «Quoridor» o «Barricade».
+Use generic or original game names: avoid trademarks such as "Connect Four", "Quoridor" or
+"Barricade".
 
 ## Stack
 
-| Capa        | Tecnología                                                                    |
-| ----------- | ----------------------------------------------------------------------------- |
-| Lenguaje    | TypeScript estricto, Node 24 LTS                                              |
-| Bots        | grammY (webhook en producción, long polling en local)                         |
-| API         | Hono, en el mismo proceso Node que los bots                                   |
-| Mini Apps   | Vite + React (SPA), Tailwind, Motion + SVG para tableros, `@tma.js/sdk-react` |
-| Datos       | Supabase Postgres, migraciones SQL, Zod                                       |
-| Tiempo real | Supabase Realtime (canales privados; eventos emitidos desde Postgres)         |
-| Trabajos    | Supabase Queues (pgmq)                                                        |
-| Hosting     | Railway (un servicio Node + Mini Apps estáticas) y Supabase Cloud (UE)        |
-| Calidad     | ESLint, Prettier, Vitest, Playwright (Fase 2), GitHub Actions                 |
+| Layer     | Technology                                                                 |
+| --------- | -------------------------------------------------------------------------- |
+| Language  | Strict TypeScript, Node 24 LTS                                             |
+| Bots      | grammY (webhook in production, long polling locally)                       |
+| API       | Hono, in the same Node process as the bots                                 |
+| Mini Apps | Vite + React (SPA), Tailwind, Motion + SVG for boards, `@tma.js/sdk-react` |
+| Data      | Supabase Postgres, SQL migrations, Zod                                     |
+| Realtime  | Supabase Realtime (private channels; events emitted from Postgres)         |
+| Jobs      | Supabase Queues (pgmq)                                                     |
+| Hosting   | Railway (one Node service + static Mini Apps) and Supabase Cloud (EU)      |
+| Quality   | ESLint, Prettier, Vitest, Playwright (Phase 2), GitHub Actions             |
 
-## Principios
+## Principles
 
-1. **El servidor es la autoridad.** El cliente solo muestra estado optimista; toda jugada se
-   valida, versiona y persiste en una transacción.
-2. **Motores puros.** Las reglas de un juego no dependen de React, grammY ni Supabase.
-3. **Identidad verificada.** En la Mini App se valida siempre el `initData` original con el
-   token del bot que la abrió; nunca `initDataUnsafe`. En el chat, la identidad es el `from` del
-   callback query que envía Telegram.
-4. **Abstracciones con el segundo caso.** El contrato `GameEngine` tiene una primera versión
-   mínima con 4 en raya y se consolida con Muros (dos tipos de jugada, recursos limitados y otra
-   condición de victoria); el SDK de módulos, al llegar el segundo bot o módulo.
-5. **Telegram en grupos:** los botones `web_app` no se permiten en grupos; se usan botones `url`
-   con direct link (`https://t.me/<bot>/<app>?startapp=<param>`). El modo inline permite invitar
-   desde cualquier chat.
+1. **The server is the authority.** The client only shows optimistic state; every move is
+   validated, versioned and persisted in a transaction.
+2. **Pure engines.** A game's rules don't depend on React, grammY or Supabase.
+3. **Verified identity.** In the Mini App, always validate the original `initData` with the
+   token of the bot that opened it; never `initDataUnsafe`. In the chat, identity is the `from`
+   of the callback query Telegram sends.
+4. **Abstractions at the second case.** The `GameEngine` contract gets a minimal first version
+   with Four in a row and is settled with Walls (two kinds of move, limited resources and a
+   different win condition); the module SDK, when the second bot or module arrives.
+5. **Telegram in groups:** `web_app` buttons are not allowed in groups; use `url` buttons with
+   a direct link (`https://t.me/<bot>/<app>?startapp=<param>`). Inline mode allows inviting from
+   any chat.
 
-## Flujos
+## Flows
 
-### Tres en raya en el chat (MVP)
+### Tic-tac-toe in the chat (MVP)
 
-1. `@bot` en cualquier chat (modo inline) o `/play` en un grupo.
-2. El bot publica la invitación; un segundo jugador pulsa «Unirme».
-3. El tablero es un teclado inline de 3×3. Cada botón lleva `ttt:<partida>:<casilla>:<versión>`
-   en `callback_data` (máx. 64 bytes).
-4. El servidor comprueba que juega quien tiene el turno y que la versión coincide, guarda la
-   jugada en una transacción y edita el mensaje. A quien no juega se le responde con un aviso.
-5. Al terminar, el mensaje muestra el resultado y un botón de revancha. En modo inline los
-   callbacks llegan con `inline_message_id` y el bot no necesita estar en el chat.
+1. `@bot` in any chat (inline mode) or `/play` in a group.
+2. The bot posts the invitation; a second player taps "Join".
+3. The board is a 3×3 inline keyboard. Each button carries `ttt:<game>:<cell>:<version>` in
+   `callback_data` (max 64 bytes).
+4. The server checks that the player whose turn it is made the move and that the version
+   matches, saves the move in a transaction and edits the message. Anyone not playing gets an
+   alert.
+5. When the game ends, the message shows the result and a rematch button. In inline mode,
+   callbacks arrive with `inline_message_id` and the bot doesn't need to be in the chat.
 
-### Juegos en Mini App (4 en raya, Muros)
+### Mini App games (Four in a row, Walls)
 
-1. `@bot` en cualquier chat (modo inline) o `/play` en un grupo.
-2. El bot publica la invitación con un direct link a la Mini App.
-3. Se une un segundo jugador; ambos abren la Mini App, el backend valida su identidad y les da
-   acceso al canal privado de la partida.
-4. Cada jugada se valida en el servidor y se guarda con su versión; el evento Realtime sale
-   desde la base de datos.
-5. Al terminar, una cola edita la invitación con el resultado y un botón de revancha.
+1. `@bot` in any chat (inline mode) or `/play` in a group.
+2. The bot posts the invitation with a direct link to the Mini App.
+3. A second player joins; both open the Mini App, the backend validates their identity and
+   grants them access to the game's private channel.
+4. Every move is validated on the server and saved with its version; the Realtime event is
+   emitted from the database.
+5. When the game ends, a queue job edits the invitation with the result and a rematch button.
 
 ## Roadmap
 
-0. **Pruebas técnicas:** teclados inline y edición de mensajes en grupos y en modo inline;
-   direct link a la Mini App en grupos. Resultado: ADRs.
-1. **Tres en raya en el chat de principio a fin:** `/play`, modo inline, jugadas persistidas con
-   versión, revancha.
-2. **4 en raya en Mini App:** tubería completa (`initData` → JWT → canal privado con RLS →
-   Realtime), resultado publicado en el grupo. Primera versión de `GameEngine`.
-3. **Fiabilidad:** límites de Telegram al editar mensajes, pulsaciones simultáneas, reconexión
-   en la Mini App, partidas abandonadas y caducadas, colas.
-4. **Muros para 2 jugadores:** colocación de muros, validación de caminos, saltos. Consolida
-   `GameEngine`.
-5. **Segundo bot o módulo (p. ej. encuestas):** se extrae el SDK de módulos.
-6. **Muros para 4 jugadores, juego de dados propio y rankings.**
+0. **Technical tests:** inline keyboards and message edits in groups and in inline mode; direct
+   link to the Mini App in groups. Outcome: ADRs.
+1. **Tic-tac-toe in the chat, end to end:** `/play`, inline mode, moves persisted with
+   versions, rematch.
+2. **Four in a row as a Mini App:** full pipeline (`initData` → JWT → private channel with RLS
+   → Realtime), result posted in the group. First version of `GameEngine`.
+3. **Reliability:** Telegram limits when editing messages, simultaneous taps, reconnection in
+   the Mini App, abandoned and expired games, queues.
+4. **Walls for 2 players:** wall placement, path validation, jumps. Settles `GameEngine`.
+5. **Second bot or module (e.g. polls):** the module SDK is extracted.
+6. **Walls for 4 players, original dice game and rankings.**
 
-**Backlog:** ajedrez.
+**Backlog:** chess.

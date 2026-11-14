@@ -9,13 +9,13 @@ import {
 } from '@tma.js/sdk-react';
 
 /**
- * Fuera de Telegram (navegador en desarrollo) simulamos el entorno para poder
- * iterar en la UI. El initData simulado NO está firmado: el backend lo rechazará,
- * que es justo lo que debe pasar. Para tests E2E usa signInitData() de
+ * Outside Telegram (browser in development) we mock the environment so we can
+ * iterate on the UI. The mocked initData is NOT signed: the backend will reject it,
+ * which is exactly what should happen. For E2E tests use signInitData() from
  * @xesmona/telegram-auth/testing.
  */
 function mockEnvForDev() {
-  const user = { id: 1, first_name: 'Dev', username: 'dev', language_code: 'es' };
+  const user = { id: 1, first_name: 'Dev', username: 'dev', language_code: 'en' };
   const tgWebAppData = new URLSearchParams({
     auth_date: String(Math.floor(Date.now() / 1000)),
     user: JSON.stringify(user),
@@ -41,12 +41,12 @@ function mockEnvForDev() {
       },
     },
   });
-  console.info('[miniapp] Entorno de Telegram simulado (solo desarrollo)');
+  console.info('[miniapp] Mocked Telegram environment (development only)');
 }
 
 export async function initTelegram() {
-  // isTMA('complete') comprueba el entorno real (no solo los parámetros guardados en
-  // sessionStorage, que sobreviven a una recarga tras simular el entorno).
+  // isTMA('complete') checks the real environment (not just the parameters stored in
+  // sessionStorage, which survive a reload after mocking the environment).
   if (import.meta.env.DEV && !(await isTMA('complete'))) mockEnvForDev();
 
   init();
@@ -60,7 +60,7 @@ export async function initTelegram() {
     themeParams.mount();
     themeParams.bindCssVars();
   }
-  // En juegos, evitamos que un gesto vertical cierre la Mini App por accidente.
+  // In games, prevent a vertical swipe from closing the Mini App by accident.
   if (swipeBehavior.mount.isAvailable()) {
     swipeBehavior.mount();
     if (swipeBehavior.disableVertical.isAvailable()) swipeBehavior.disableVertical();

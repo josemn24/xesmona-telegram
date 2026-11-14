@@ -1,23 +1,24 @@
-# ADR 0004: Varios bots en un proceso
+# ADR 0004: Several bots in one process
 
-- Estado: aceptada (2026-11-14)
+- Status: accepted (2026-11-14)
 
-## Contexto
+## Context
 
-Xesmona tendrá varios bots (juegos, encuestas, comunidad…) con marca y configuración propias.
+Xesmona will have several bots (games, polls, community…) with their own branding and
+configuration.
 
-## Decisión
+## Decision
 
-- Cada bot vive en `apps/bot-<id>` y exporta un `BotDefinition` (`@xesmona/contracts`).
-- `apps/server` mantiene un registro estático de bots, crea una instancia de grammY por bot y
-  expone `POST /webhook/<id>` (validando `X-Telegram-Bot-Api-Secret-Token`).
-- Configuración por bot con prefijo de entorno `BOT_<ID>_` (`TOKEN`, `WEBHOOK_SECRET`,
-  `MINIAPP_URL`). Un bot sin token se omite al arrancar.
-- Los datos llevan `bot_id`. Una Mini App puede servir a varios bots: el backend valida el
-  `initData` con el token del bot que la abrió.
+- Each bot lives in `apps/bot-<id>` and exports a `BotDefinition` (`@xesmona/contracts`).
+- `apps/server` keeps a static bot registry, creates one grammY instance per bot and exposes
+  `POST /webhook/<id>` (validating `X-Telegram-Bot-Api-Secret-Token`).
+- Per-bot configuration with the `BOT_<ID>_` environment prefix (`TOKEN`, `WEBHOOK_SECRET`,
+  `MINIAPP_URL`). A bot without a token is skipped at startup.
+- Data carries a `bot_id`. One Mini App can serve several bots: the backend validates the
+  `initData` with the token of the bot that opened it.
 
-## Consecuencias
+## Consequences
 
-- Añadir un bot = nueva app + una línea en el registro + variables de entorno.
-- Un fallo grave en un bot afecta al proceso compartido; mitigación: `bot.catch` por bot y, si
-  hace falta, separar el bot en otro servicio.
+- Adding a bot = a new app + one line in the registry + environment variables.
+- A serious failure in one bot affects the shared process; mitigation: a `bot.catch` per bot
+  and, if needed, moving the bot to its own service.
