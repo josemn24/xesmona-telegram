@@ -21,7 +21,9 @@ create table public.games (
   -- Null while the invitation is waiting for a second player or the vs-bot choice.
   mode text check (mode in ('pvp', 'vs_bot')),
   bot_level text check (bot_level in ('easy', 'normal', 'hard')),
-  status text not null default 'waiting' check (status in ('waiting', 'playing', 'finished')),
+  -- 'expired': abandoned (waiting or idle too long), no winner (ADR 0010).
+  status text not null default 'waiting'
+    check (status in ('waiting', 'playing', 'finished', 'expired')),
   -- Engine state (pure JSON, owned by the game's engine).
   state jsonb not null,
   -- Incremented on every accepted change; travels in callback_data (optimistic concurrency).
@@ -37,12 +39,16 @@ create table public.games (
   inline_message_id text,
   -- Stable per chat, also present on inline callbacks (ADR 0006).
   chat_instance text,
+  -- The version the chat message is known to show; null until the first confirmed edit.
+  -- Behind `version` while a render waits in message_renders (ADR 0010).
+  rendered_version integer,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint games_level_only_vs_bot check (
     (mode is not distinct from 'vs_bot') = (bot_level is not null)
   ),
-  constraint games_mode_once_started check (status = 'waiting' or mode is not null),
+  -- An invitation nobody accepted expires without a mode.
+  constraint games_mode_once_started check (status in ('waiting', 'expired') or mode is not null),
   constraint games_winner_only_on_win check ((result = 'win') = (winner_seat is not null)),
   constraint games_chat_message_pair check ((chat_id is null) = (message_id is null)),
   constraint games_single_message_ref check (

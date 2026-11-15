@@ -60,7 +60,7 @@ export function boardKeyboard(game: Game): InlineKeyboard {
     keyboard.text(label, callbackData('ttt', toHex(game.id), cell, game.version));
     if (cell % 3 === 2) keyboard.row();
   });
-  if (outcome(game.state)) {
+  if (outcome(game.state) || game.status === 'expired') {
     keyboard.text('🔁 Rematch', callbackData('ttr', toHex(game.id), game.version));
   }
   return keyboard;

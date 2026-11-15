@@ -16,18 +16,26 @@ export interface Player {
   displayName: string;
 }
 
-/** Where the game's message lives: a chat message or an inline message (ADR 0006). */
+/**
+ * Where the game's message lives: a chat message or an inline message (ADR 0006). Inline
+ * messages carry the chat_instance, which groups them by chat for rate limits (ADR 0008).
+ */
 export type MessageRef =
-  { chatId: number; messageId: number; threadId: number | null } | { inlineMessageId: string };
+  | { chatId: number; messageId: number; threadId: number | null }
+  | { inlineMessageId: string; chatInstance: string | null };
+
+export type GameStatus = 'waiting' | 'playing' | 'finished' | 'expired';
 
 export interface Game<State> {
   id: string;
   gameType: string;
   mode: Mode | null;
   botLevel: BotLevel | null;
-  status: 'waiting' | 'playing' | 'finished';
+  status: GameStatus;
   state: State;
   version: number;
+  /** The version the chat message is known to show (ADR 0010). */
+  renderedVersion: number | null;
   round: number;
   result: 'win' | 'draw' | null;
   winnerSeat: Seat | null;
@@ -65,7 +73,9 @@ function toPlayer(row: PlayerRow): Player {
 }
 
 function toMessage(row: GameRow): MessageRef | null {
-  if (row.inline_message_id) return { inlineMessageId: row.inline_message_id };
+  if (row.inline_message_id) {
+    return { inlineMessageId: row.inline_message_id, chatInstance: row.chat_instance };
+  }
   if (row.chat_id !== null && row.message_id !== null) {
     return { chatId: row.chat_id, messageId: row.message_id, threadId: row.message_thread_id };
   }
@@ -78,10 +88,11 @@ function toGame<State>(row: GameRow, players: Player[]): Game<State> {
     gameType: row.game_type,
     mode: row.mode as Mode | null,
     botLevel: row.bot_level as BotLevel | null,
-    status: row.status as Game<State>['status'],
+    status: row.status as GameStatus,
     // Written only through this module from the engine's State.
     state: row.state as unknown as State,
     version: row.version,
+    renderedVersion: row.rendered_version,
     round: row.round,
     result: row.result as Game<State>['result'],
     winnerSeat: row.winner_seat as Seat | null,
@@ -143,6 +154,17 @@ export async function findGame<State>(
     .maybeSingle();
   if (error) fail('findGame', error);
   return data ? toGame<State>(data, data.game_players.map(toPlayer)) : undefined;
+}
+
+/** Loads a game of any type (the render worker only knows the id). */
+export async function loadGame(db: Db, id: string): Promise<Game<unknown> | undefined> {
+  const { data, error } = await db
+    .from('games')
+    .select(GAME_WITH_PLAYERS)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) fail('loadGame', error);
+  return data ? toGame<unknown>(data, data.game_players.map(toPlayer)) : undefined;
 }
 
 export async function findGameByInlineMessage<State>(
@@ -282,4 +304,47 @@ export async function saveGame<State>(
   });
   if (error) fail('saveGame', error);
   return data?.id ? toGame<State>(data, game.players) : undefined;
+}
+
+// --- Message renders (ADR 0010) ---------------------------------------------------
+
+export interface PendingRender {
+  gameId: string;
+  /** Claims so far, this one included. */
+  attempts: number;
+}
+
+/** Queues a render of the game's message; coalesces with a pending one. */
+export async function enqueueRender(db: Db, gameId: string, delaySeconds = 0): Promise<void> {
+  const { error } = await db.rpc('enqueue_render', {
+    p_game_id: gameId,
+    p_delay_seconds: Math.ceil(delaySeconds),
+  });
+  if (error) fail('enqueueRender', error);
+}
+
+/** Claims due renders; claimed rows are leased so no other worker takes them meanwhile. */
+export async function claimRenders(db: Db, limit = 20): Promise<PendingRender[]> {
+  const { data, error } = await db.rpc('claim_renders', { p_limit: limit });
+  if (error) fail('claimRenders', error);
+  return (data ?? []).map((row) => ({ gameId: row.game_id, attempts: row.attempts }));
+}
+
+/** The message shows `version`: the pending render is dropped if nothing newer is left. */
+export async function markRendered(db: Db, gameId: string, version: number): Promise<void> {
+  const { error } = await db.rpc('mark_rendered', { p_game_id: gameId, p_version: version });
+  if (error) fail('markRendered', error);
+}
+
+/** Gives up on a game's pending render (message gone, bot removed, too many attempts). */
+export async function dropRender(db: Db, gameId: string): Promise<void> {
+  const { error } = await db.from('message_renders').delete().eq('game_id', gameId);
+  if (error) fail('dropRender', error);
+}
+
+/** Expires abandoned games and queues their message renders. Returns how many expired. */
+export async function expireGames(db: Db): Promise<number> {
+  const { data, error } = await db.rpc('expire_games');
+  if (error) fail('expireGames', error);
+  return data ?? 0;
 }

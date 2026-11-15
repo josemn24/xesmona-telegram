@@ -143,6 +143,7 @@ export type Database = {
           message_id: number | null
           message_thread_id: number | null
           mode: string | null
+          rendered_version: number | null
           result: string | null
           round: number
           state: Json
@@ -164,6 +165,7 @@ export type Database = {
           message_id?: number | null
           message_thread_id?: number | null
           mode?: string | null
+          rendered_version?: number | null
           result?: string | null
           round?: number
           state: Json
@@ -185,6 +187,7 @@ export type Database = {
           message_id?: number | null
           message_thread_id?: number | null
           mode?: string | null
+          rendered_version?: number | null
           result?: string | null
           round?: number
           state?: Json
@@ -206,6 +209,35 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "telegram_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_renders: {
+        Row: {
+          attempts: number
+          created_at: string
+          game_id: string
+          not_before: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          game_id: string
+          not_before?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          game_id?: string
+          not_before?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_renders_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: true
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
         ]
@@ -262,6 +294,7 @@ export type Database = {
           message_id: number | null
           message_thread_id: number | null
           mode: string | null
+          rendered_version: number | null
           result: string | null
           round: number
           state: Json
@@ -275,6 +308,21 @@ export type Database = {
           to: "games"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      claim_renders: {
+        Args: { p_lease_seconds?: number; p_limit?: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          game_id: string
+          not_before: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "message_renders"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       create_game: {
@@ -303,6 +351,7 @@ export type Database = {
           message_id: number | null
           message_thread_id: number | null
           mode: string | null
+          rendered_version: number | null
           result: string | null
           round: number
           state: Json
@@ -317,6 +366,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      enqueue_render: {
+        Args: { p_delay_seconds?: number; p_game_id: string }
+        Returns: undefined
+      }
+      expire_games: {
+        Args: { p_idle?: string; p_waiting?: string }
+        Returns: number
       }
       is_game_player: {
         Args: { p_game_id: string; p_user_id: number }
@@ -343,6 +400,7 @@ export type Database = {
           message_id: number | null
           message_thread_id: number | null
           mode: string | null
+          rendered_version: number | null
           result: string | null
           round: number
           state: Json
@@ -357,6 +415,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      mark_rendered: {
+        Args: { p_game_id: string; p_version: number }
+        Returns: undefined
       }
       save_game: {
         Args: {
@@ -382,6 +444,7 @@ export type Database = {
           message_id: number | null
           message_thread_id: number | null
           mode: string | null
+          rendered_version: number | null
           result: string | null
           round: number
           state: Json
@@ -418,6 +481,7 @@ export type Database = {
           message_id: number | null
           message_thread_id: number | null
           mode: string | null
+          rendered_version: number | null
           result: string | null
           round: number
           state: Json

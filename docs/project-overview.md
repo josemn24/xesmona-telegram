@@ -50,7 +50,7 @@ Use generic or original game names: avoid trademarks such as "Connect Four", "Qu
 | Mini Apps | Vite + React (SPA), Tailwind, Motion + SVG for boards, `@tma.js/sdk-react` |
 | Data      | Supabase Postgres, SQL migrations, Zod                                     |
 | Realtime  | Supabase Realtime (private channels; events emitted from Postgres)         |
-| Jobs      | Supabase Queues (pgmq)                                                     |
+| Jobs      | Postgres tables + a worker in the server process (ADR 0010)                |
 | Hosting   | Railway (one Node service + static Mini Apps) and Supabase Cloud (EU)      |
 | Quality   | ESLint, Prettier, Vitest, Playwright (Phase 2), GitHub Actions             |
 
@@ -95,7 +95,8 @@ reply and saves both moves before editing the message once.
    grants them access to the game's private channel.
 4. Every move is validated on the server and saved with its version; the Realtime event is
    emitted from the database.
-5. When the game ends, a queue job edits the invitation with the result and a rematch button.
+5. When the game ends, the server edits the invitation with the result and a rematch button
+   (queued and retried if Telegram rate-limits the chat, ADR 0010).
 
 ## Roadmap
 
@@ -113,7 +114,12 @@ reply and saves both moves before editing the message once.
    invitation, live updates on iOS and macOS, one result edit, rematch) and vs the Normal
    bot. Still to try: Easy and Hard, a two-player `/four` in a group, Android._
 3. **Reliability:** Telegram limits when editing messages, simultaneous taps, reconnection in
-   the Mini App, abandoned and expired games, queues.
+   the Mini App, abandoned and expired games, queues. Starts with the first deploy (Railway +
+   Supabase Cloud, production only, [deploy.md](deploy.md)) so it's tested against real
+   webhooks. _In progress (2026-11-15): Docker/Railway setup, webhook timeout, render queue,
+   game expiry ([ADR 0010](adr/0010-message-renders-and-expiry.md)) and Mini App reconnect
+   (rejoin with backoff, refresh on resume) built. Still to do: the first deploy, the 429
+   check in a real group, the reconnect check on devices._
 4. **Walls for 2 players:** wall placement, path validation, jumps. Settles `GameEngine`.
    Walls vs bot comes after the 2-player version works.
 5. **Second bot or module (e.g. polls):** the module SDK is extracted.

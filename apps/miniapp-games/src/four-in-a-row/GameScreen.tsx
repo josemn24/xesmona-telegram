@@ -42,6 +42,7 @@ export function GameScreen({ gameId }: { gameId: string }) {
 
   let status: string;
   if (snapshot.status === 'waiting') status = 'Waiting for players…';
+  else if (snapshot.status === 'expired') status = 'This game expired.';
   else if (snapshot.status === 'finished' || outcome !== null) {
     if (isDraw) status = 'Draw! 🤝';
     else if (winner === null) status = 'Game over';

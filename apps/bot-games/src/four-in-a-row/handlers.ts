@@ -3,16 +3,10 @@
 import type { Db } from '@xesmona/contracts';
 import { startingSeat } from '@xesmona/games';
 import { fourInARow, type State } from '@xesmona/games/four-in-a-row';
-import {
-  GrammyError,
-  type Api,
-  type Bot,
-  type CallbackQueryContext,
-  type Context,
-  type InlineKeyboard,
-} from 'grammy';
+import type { Api, Bot, CallbackQueryContext, Context } from 'grammy';
 import type { InlineQueryResult } from 'grammy/types';
 import { LEVEL_BY_CODE, fromHex } from '../games/callback';
+import { renderCallbackMessage, renderGame } from '../games/render';
 import {
   BOT_PLAYER_NAME,
   attachMessage,
@@ -27,16 +21,14 @@ import {
   startVsBot,
   upsertUser,
   type Game,
-  type MessageRef,
 } from '../games/store';
 import {
-  gameKeyboard,
   inlineInvitationKeyboard,
   inlineLevelKeyboard,
   invitationKeyboard,
   levelKeyboard,
 } from './keyboard';
-import { NO_MINI_APP, gameText, invitationText, levelText } from './text';
+import { NO_MINI_APP, gameView, invitationText, levelText } from './text';
 
 type CallbackCtx = CallbackQueryContext<Context>;
 
@@ -58,37 +50,12 @@ const toast = (ctx: CallbackCtx, text: string) => ctx.answerCallbackQuery({ text
 const alert = (ctx: CallbackCtx, text: string) =>
   ctx.answerCallbackQuery({ text, show_alert: true });
 
-function isNotModified(error: unknown) {
-  return error instanceof GrammyError && error.description.includes('message is not modified');
-}
-
-/** Edits the message of the callback (chat or inline). "Not modified" is ignored. */
-async function render(ctx: Context, text: string, keyboard: InlineKeyboard) {
-  try {
-    await ctx.editMessageText(text, { reply_markup: keyboard });
-  } catch (error) {
-    if (!isNotModified(error)) console.error('[four-in-a-row] edit failed', error);
-  }
-}
-
 /**
- * Edits a game's message from outside a callback (the Mini App API, when a game ends).
- * Failures, a 429 included, are logged and never fail the move (ADR 0008).
+ * Shows a game's current state in its chat message (callbacks, and the Mini App API when a game
+ * ends). A 429 or a transient error queues the render for later (ADR 0010).
  */
-export async function renderGameMessage(api: Api, game: Game<State>, miniAppUrl: string) {
-  const message: MessageRef | null = game.message;
-  if (!message) return;
-  const text = gameText(game);
-  const reply_markup = gameKeyboard(game, miniAppUrl);
-  try {
-    if ('inlineMessageId' in message) {
-      await api.editMessageTextInline(message.inlineMessageId, text, { reply_markup });
-    } else {
-      await api.editMessageText(message.chatId, message.messageId, text, { reply_markup });
-    }
-  } catch (error) {
-    if (!isNotModified(error)) console.error('[four-in-a-row] result edit failed', error);
-  }
+export function renderGameMessage(api: Api, db: Db, game: Game<State>, miniAppUrl: string) {
+  return renderGame(api, db, game, gameView(game, miniAppUrl));
 }
 
 /** Four in a row entries of the bot's inline results; none without the Mini App. */
@@ -149,7 +116,7 @@ export function registerFourInARow(
   /** Shows a started game: players and the link that opens it in the Mini App. */
   async function showGame(ctx: CallbackCtx, game: Game<State>, url: string) {
     await ctx.answerCallbackQuery();
-    await render(ctx, gameText(game), gameKeyboard(game, url));
+    await renderGameMessage(ctx.api, db, game, url);
   }
 
   bot.command('four', async (ctx) => {
@@ -196,7 +163,10 @@ export function registerFourInARow(
     if (ctx.from.id !== game.createdBy) return alert(ctx, MESSAGES.onlyCreator);
     if (Number(match(ctx, 2)) !== game.version) return toast(ctx, MESSAGES.stale);
     await ctx.answerCallbackQuery();
-    await render(ctx, levelText(game.players[0]?.displayName ?? '?'), levelKeyboard(game));
+    await renderCallbackMessage(ctx, {
+      text: levelText(game.players[0]?.displayName ?? '?'),
+      keyboard: levelKeyboard(game),
+    });
   });
 
   // Level chosen on a /four invitation: start vs bot.
@@ -264,7 +234,10 @@ export function registerFourInARow(
     if (!isCreator) return alert(ctx, MESSAGES.onlyCreator);
     if (action === 'b') {
       await ctx.answerCallbackQuery();
-      return render(ctx, levelText(creatorName), inlineLevelKeyboard(creatorId));
+      return renderCallbackMessage(ctx, {
+        text: levelText(creatorName),
+        keyboard: inlineLevelKeyboard(creatorId),
+      });
     }
 
     const level = LEVEL_BY_CODE[action];
@@ -285,7 +258,9 @@ export function registerFourInARow(
     const game = await find(fromHex(match(ctx, 1)));
     if (!game) return toast(ctx, MESSAGES.gone);
     if (humanSeat(game, ctx.from.id) === undefined) return alert(ctx, MESSAGES.notPlayer);
-    if (game.status !== 'finished') return toast(ctx, MESSAGES.notOver);
+    if (game.status !== 'finished' && game.status !== 'expired') {
+      return toast(ctx, MESSAGES.notOver);
+    }
     if (Number(match(ctx, 2)) !== game.version) return toast(ctx, MESSAGES.stale);
     const round = game.round + 1;
     const saved = await saveGame(db, game, {

@@ -1,8 +1,7 @@
 // Tic-tac-toe in the chat: /play, inline mode, moves, vs bot and rematch.
 // Flows in docs/project-overview.md; decisions in ADR 0005 and ADR 0006.
 import type { Db } from '@xesmona/contracts';
-import { GrammyError, type Bot, type CallbackQueryContext, type Context } from 'grammy';
-import type { InlineKeyboard } from 'grammy';
+import type { Bot, CallbackQueryContext, Context } from 'grammy';
 import type { InlineQueryResult } from 'grammy/types';
 import {
   applyMove,
@@ -17,13 +16,13 @@ import {
 } from '@xesmona/games/tic-tac-toe';
 import {
   LEVEL_BY_CODE,
-  boardKeyboard,
   fromHex,
   inlineInvitationKeyboard,
   inlineLevelKeyboard,
   invitationKeyboard,
   levelKeyboard,
 } from './keyboard';
+import { renderCallbackMessage, renderGame } from '../games/render';
 import {
   BOT_PLAYER_NAME,
   attachMessage,
@@ -39,7 +38,7 @@ import {
   type Game,
   type SaveInput,
 } from './store';
-import { boardText, invitationText, levelText } from './text';
+import { gameView, invitationText, levelText } from './text';
 
 type CallbackCtx = CallbackQueryContext<Context>;
 
@@ -69,18 +68,6 @@ const alert = (ctx: CallbackCtx, text: string) =>
 /** Keeps replies inside the forum topic the command came from (ADR 0006). */
 function threadId(ctx: Context): number | undefined {
   return ctx.msg?.is_topic_message ? ctx.msg.message_thread_id : undefined;
-}
-
-/** Edits the game message (chat or inline). "Not modified" is harmless and ignored. */
-async function render(ctx: Context, text: string, keyboard: InlineKeyboard) {
-  try {
-    await ctx.editMessageText(text, { reply_markup: keyboard });
-  } catch (error) {
-    if (error instanceof GrammyError && error.description.includes('message is not modified')) {
-      return;
-    }
-    console.error('[tic-tac-toe] edit failed', error);
-  }
 }
 
 const humanSeat = (game: Game, userId: number): Seat | undefined =>
@@ -164,7 +151,7 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
     const joined = await joinGame(db, game, ctx.from, initialState(startingSeat('pvp', 0)));
     if (!joined) return toast(ctx, MESSAGES.started);
     await ctx.answerCallbackQuery();
-    await render(ctx, boardText(joined), boardKeyboard(joined));
+    await renderGame(ctx.api, db, joined, gameView(joined));
   });
 
   // "Play vs bot" on a /play invitation: show the levels.
@@ -175,7 +162,10 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
     if (ctx.from.id !== game.createdBy) return alert(ctx, MESSAGES.onlyCreator);
     if (Number(match(ctx, 2)) !== game.version) return toast(ctx, MESSAGES.stale);
     await ctx.answerCallbackQuery();
-    await render(ctx, levelText(game.players[0]?.displayName ?? '?'), levelKeyboard(game));
+    await renderCallbackMessage(ctx, {
+      text: levelText(game.players[0]?.displayName ?? '?'),
+      keyboard: levelKeyboard(game),
+    });
   });
 
   // Level chosen on a /play invitation: start vs bot.
@@ -189,7 +179,7 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
     const started = await startVsBot(db, game, level, initialState(startingSeat('vs_bot', 0)));
     if (!started) return toast(ctx, MESSAGES.started);
     await ctx.answerCallbackQuery();
-    await render(ctx, boardText(started), boardKeyboard(started));
+    await renderGame(ctx.api, db, started, gameView(started));
   });
 
   // First tap on an inline message: the game is created now (ADR 0006).
@@ -238,13 +228,16 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
       });
       if (!game) return toast(ctx, MESSAGES.started);
       await ctx.answerCallbackQuery();
-      return render(ctx, boardText(game), boardKeyboard(game));
+      return renderGame(ctx.api, db, game, gameView(game));
     }
 
     if (!isCreator) return alert(ctx, MESSAGES.onlyCreator);
     if (action === 'b') {
       await ctx.answerCallbackQuery();
-      return render(ctx, levelText(creatorName), inlineLevelKeyboard(creatorId));
+      return renderCallbackMessage(ctx, {
+        text: levelText(creatorName),
+        keyboard: inlineLevelKeyboard(creatorId),
+      });
     }
 
     const level = LEVEL_BY_CODE[action];
@@ -258,7 +251,7 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
     });
     if (!game) return toast(ctx, MESSAGES.started);
     await ctx.answerCallbackQuery();
-    return render(ctx, boardText(game), boardKeyboard(game));
+    return renderGame(ctx.api, db, game, gameView(game));
   });
 
   // --- Playing -----------------------------------------------------------------
@@ -297,14 +290,15 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
     // Someone else changed the game first (e.g. a simultaneous tap).
     if (!saved) return toast(ctx, MESSAGES.stale);
     await ctx.answerCallbackQuery();
-    await render(ctx, boardText(saved), boardKeyboard(saved));
+    await renderGame(ctx.api, db, saved, gameView(saved));
   });
 
   onCallback(/^ttr:([0-9a-f]{32}):(\d+)$/, async (ctx) => {
     const game = await findGame(db, fromHex(match(ctx, 1)));
     if (!game) return toast(ctx, MESSAGES.gone);
     if (humanSeat(game, ctx.from.id) === undefined) return alert(ctx, MESSAGES.notPlayer);
-    if (Number(match(ctx, 2)) !== game.version || game.status !== 'finished') {
+    const over = game.status === 'finished' || game.status === 'expired';
+    if (Number(match(ctx, 2)) !== game.version || !over) {
       return toast(ctx, MESSAGES.stale);
     }
     const round = game.round + 1;
@@ -316,6 +310,6 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
     });
     if (!saved) return toast(ctx, MESSAGES.stale);
     await ctx.answerCallbackQuery();
-    await render(ctx, boardText(saved), boardKeyboard(saved));
+    await renderGame(ctx.api, db, saved, gameView(saved));
   });
 }

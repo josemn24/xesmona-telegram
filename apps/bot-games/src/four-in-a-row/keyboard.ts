@@ -44,14 +44,12 @@ export function inlineLevelKeyboard(creatorId: number): InlineKeyboard {
   return keyboard;
 }
 
-/** A started game: open it in the Mini App; once finished, also a rematch. */
+/** A started game: open it in the Mini App; once finished or expired, also a rematch. */
 export function gameKeyboard(game: Game<State>, miniAppUrl: string): InlineKeyboard {
   const keyboard = new InlineKeyboard();
-  if (game.status === 'finished') {
+  const over = game.status === 'finished' || game.status === 'expired';
+  if (over) {
     keyboard.text('🔁 Rematch', callbackData('c4r', toHex(game.id), game.version)).row();
   }
-  return keyboard.url(
-    game.status === 'finished' ? '🎮 See the board' : '🎮 Open game',
-    gameLink(miniAppUrl, game.id),
-  );
+  return keyboard.url(over ? '🎮 See the board' : '🎮 Open game', gameLink(miniAppUrl, game.id));
 }

@@ -1,6 +1,6 @@
 # ADR 0008: Telegram rate limits for messages and edits
 
-- Status: accepted (2026-11-15)
+- Status: accepted (2026-11-15); queue design amended by ADR 0010
 
 ## Context
 
@@ -43,14 +43,13 @@ Measured (R1):
 - Every edit renders the whole board from the latest database state, so a delayed edit only
   needs the newest state: pending edits for the same message are coalesced into one, sent
   after `retry_after`.
-- Until the Phase 3 queue exists, a failed edit (429 included) is only logged by the
-  tic-tac-toe `render` helper and the board stays stale until the next successful edit, which
-  shows the full current state.
+- Phase 3 implemented this as a render queue (ADR 0010): a failed edit queues the game's
+  message, which is rendered from the latest state once the chat's cooldown ends.
 
 ## Consequences
 
-- Phase 3 adds a per-chat edit queue (Supabase Queues) that honours `retry_after` and
-  coalesces edits by message.
+- Phase 3 adds a per-chat edit queue that honours `retry_after` and coalesces edits by message:
+  a table rather than Supabase Queues, see ADR 0010.
 - No blind auto-retry middleware (such as grammY's auto-retry plugin with long waits) on the
   webhook path.
 - Busy groups with several fast in-chat games at once can hit the limit; that's a reason to
