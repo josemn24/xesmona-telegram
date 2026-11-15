@@ -10,6 +10,8 @@ first game with a real engine of its own.
 
 ## Games
 
+Per-game rules, bots and ideas live in [games/](games/README.md); this is the summary.
+
 | Game          | Where it's played         | What it's for                                                                                                                         |
 | ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Tic-tac-toe   | Chat: 3×3 inline keyboard | MVP, also playable vs bot. Validates the bot, persistence, move versioning and concurrency without a Mini App.                        |
