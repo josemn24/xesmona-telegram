@@ -13,7 +13,10 @@
   "dependencies": {
     "@supabase/supabase-js": "catalog:",
     "@xesmona/contracts": "workspace:*",
-    "grammy": "catalog:"
+    "@xesmona/games": "workspace:*",
+    "@xesmona/telegram-auth": "workspace:*",
+    "grammy": "catalog:",
+    "hono": "^4.13.18"
   },
   "devDependencies": {
     "@types/node": "catalog:",

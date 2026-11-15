@@ -7,6 +7,7 @@ import {
   type BotServices,
 } from '@xesmona/contracts';
 import { Bot } from 'grammy';
+import type { Hono } from 'hono';
 
 /** Static bot registry. Add each new apps/bot-<id> here. */
 const definitions: BotDefinition[] = [gamesBot];
@@ -15,6 +16,8 @@ export interface RunningBot {
   id: string;
   bot: Bot;
   config: BotEnv;
+  /** The bot's Mini App API, mounted at /api/<id>. */
+  api?: Hono;
 }
 
 /** `getServices` is called only if at least one bot starts (it may exit when misconfigured). */
@@ -35,7 +38,8 @@ export function createBots(
     services ??= getServices();
     definition.setup(bot, config, services);
     bot.catch((err) => console.error(`[bot:${definition.id}]`, err.error));
-    bots.push({ id: definition.id, bot, config });
+    const api = definition.api?.(bot, config, services);
+    bots.push({ id: definition.id, bot, config, ...(api && { api }) });
   }
   return bots;
 }

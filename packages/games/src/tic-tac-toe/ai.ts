@@ -1,15 +1,8 @@
 // Bot opponent (ADR 0005). Pure: the random source is injected so tests are deterministic.
+import { pick, type BotLevel } from '../engine';
 import { applyMove, legalMoves, other, outcome, type Seat, type State } from './engine';
 
-export type BotLevel = 'easy' | 'normal' | 'hard';
-
-export const BOT_LEVELS: readonly BotLevel[] = ['easy', 'normal', 'hard'];
-
-function pick<T>(items: readonly T[], rng: () => number): T {
-  const item = items[Math.floor(rng() * items.length)];
-  if (item === undefined) throw new Error('Nothing to pick from');
-  return item;
-}
+export { BOT_LEVELS, type BotLevel } from '../engine';
 
 function play(state: State, seat: Seat, cell: number): State {
   const result = applyMove(state, seat, cell);

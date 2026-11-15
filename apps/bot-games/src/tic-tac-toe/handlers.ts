@@ -3,9 +3,10 @@
 import type { Db } from '@xesmona/contracts';
 import { GrammyError, type Bot, type CallbackQueryContext, type Context } from 'grammy';
 import type { InlineKeyboard } from 'grammy';
-import { chooseMove } from './ai';
+import type { InlineQueryResult } from 'grammy/types';
 import {
   applyMove,
+  chooseMove,
   initialState,
   other,
   outcome,
@@ -13,7 +14,7 @@ import {
   type MoveError,
   type Seat,
   type State,
-} from './engine';
+} from '@xesmona/games/tic-tac-toe';
 import {
   LEVEL_BY_CODE,
   boardKeyboard,
@@ -92,6 +93,28 @@ function resultFields(state: State): Pick<SaveInput, 'status' | 'result' | 'winn
   return { status: 'finished', result: 'win', winnerSeat: result.winner };
 }
 
+/** Tic-tac-toe entries of the bot's inline results (registered in src/index.ts). */
+export function ticTacToeInlineResults(name: string, userId: number): InlineQueryResult[] {
+  return [
+    {
+      type: 'article',
+      id: 'challenge',
+      title: 'Challenge someone to tic-tac-toe',
+      description: 'Anyone in this chat can join',
+      input_message_content: { message_text: invitationText(name) },
+      reply_markup: inlineInvitationKeyboard(userId),
+    },
+    {
+      type: 'article',
+      id: 'vs-bot',
+      title: 'Play tic-tac-toe vs the bot',
+      description: 'Easy, Normal or Hard',
+      input_message_content: { message_text: levelText(name) },
+      reply_markup: inlineLevelKeyboard(userId),
+    },
+  ];
+}
+
 export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
   /** Registers a callback handler that always answers the query, even on errors. */
   function onCallback(pattern: RegExp, handler: (ctx: CallbackCtx) => Promise<unknown>) {
@@ -128,33 +151,6 @@ export function registerTicTacToe(bot: Bot, db: Db, botId: string) {
       ...(thread !== undefined && { message_thread_id: thread }),
     });
     await attachMessage(db, game.id, message.chat.id, message.message_id, thread);
-  });
-
-  bot.on('inline_query', async (ctx) => {
-    await upsertUser(db, ctx.from);
-    const name = displayName(ctx.from);
-    await ctx.answerInlineQuery(
-      [
-        {
-          type: 'article',
-          id: 'challenge',
-          title: 'Challenge someone to tic-tac-toe',
-          description: 'Anyone in this chat can join',
-          input_message_content: { message_text: invitationText(name) },
-          reply_markup: inlineInvitationKeyboard(ctx.from.id),
-        },
-        {
-          type: 'article',
-          id: 'vs-bot',
-          title: 'Play tic-tac-toe vs the bot',
-          description: 'Easy, Normal or Hard',
-          input_message_content: { message_text: levelText(name) },
-          reply_markup: inlineLevelKeyboard(ctx.from.id),
-        },
-      ],
-      // Buttons carry the sender's id, so results can't be shared between users.
-      { cache_time: 0, is_personal: true },
-    );
   });
 
   // Join a /play invitation.

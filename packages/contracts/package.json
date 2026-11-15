@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "catalog:",
+    "hono": "^4.13.18",
     "zod": "catalog:"
   },
   "peerDependencies": {

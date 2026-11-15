@@ -17,7 +17,7 @@ alter table public.telegram_users enable row level security;
 create table public.games (
   id uuid primary key default gen_random_uuid(),
   bot_id text not null references public.bots (id),
-  game_type text not null check (game_type in ('tic-tac-toe')),
+  game_type text not null check (game_type in ('tic-tac-toe', 'four-in-a-row')),
   -- Null while the invitation is waiting for a second player or the vs-bot choice.
   mode text check (mode in ('pvp', 'vs_bot')),
   bot_level text check (bot_level in ('easy', 'normal', 'hard')),

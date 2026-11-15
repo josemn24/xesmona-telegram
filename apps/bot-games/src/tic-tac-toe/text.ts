@@ -1,10 +1,8 @@
 // User-facing texts (English for now; i18n will use Telegram's language_code).
-import type { BotLevel } from './ai';
-import { markOf, outcome, startingSeat, type Seat } from './engine';
+import { markOf, outcome, startingSeat, type Seat } from '@xesmona/games/tic-tac-toe';
+import { LEVEL_NAMES } from '../games/callback';
 import { MARK_EMOJI } from './keyboard';
 import type { Game } from './store';
-
-const LEVEL_NAMES: Record<BotLevel, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 
 export const invitationText = (name: string) =>
   `${name} wants to play tic-tac-toe. Who's in?\n\nOr play against the bot.`;

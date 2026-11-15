@@ -9,7 +9,6 @@ import { logger } from 'hono/logger';
 import { createBots } from './bots';
 import { createServices } from './db';
 import { loadEnv } from './env';
-import { spikeRoutes } from './spike-routes';
 
 const env = loadEnv();
 const bots = createBots(process.env, () => createServices(env));
@@ -19,8 +18,10 @@ app.use(logger());
 
 app.get('/health', (c) => c.json({ ok: true, mode: env.BOT_MODE, bots: bots.map((b) => b.id) }));
 
-// Phase 0 spike: remove once the Mini App tests (M1–M6) are done.
-app.route('/api/spike', spikeRoutes(bots.map(({ id, config }) => ({ id, token: config.TOKEN }))));
+// Mini App APIs: one prefix per bot.
+for (const { id, api } of bots) {
+  if (api) app.route(`/api/${id}`, api);
+}
 
 // Webhooks: one route per bot. grammY validates X-Telegram-Bot-Api-Secret-Token.
 if (env.BOT_MODE === 'webhook') {

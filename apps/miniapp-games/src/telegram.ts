@@ -17,15 +17,20 @@ import {
  */
 function mockEnvForDev() {
   const user = { id: 1, first_name: 'Dev', username: 'dev', language_code: 'en' };
-  const tgWebAppData = new URLSearchParams({
-    auth_date: String(Math.floor(Date.now() / 1000)),
-    user: JSON.stringify(user),
-    start_param: 'dev',
-    chat_type: 'group',
-    chat_instance: '0',
-    signature: 'dev',
-    hash: 'dev',
-  });
+  // `?devInitData=<initData signed with signInitData()>` lets the browser talk to the local
+  // server as a real player (signed with the dev bot's token; never in production builds).
+  const signed = new URLSearchParams(window.location.search).get('devInitData');
+  const tgWebAppData = signed
+    ? new URLSearchParams(signed)
+    : new URLSearchParams({
+        auth_date: String(Math.floor(Date.now() / 1000)),
+        user: JSON.stringify(user),
+        start_param: 'dev',
+        chat_type: 'group',
+        chat_instance: '0',
+        signature: 'dev',
+        hash: 'dev',
+      });
   mockTelegramEnv({
     launchParams: {
       tgWebAppData,

@@ -318,6 +318,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      is_game_player: {
+        Args: { p_game_id: string; p_user_id: number }
+        Returns: boolean
+      }
       join_game: {
         Args: {
           p_display_name: string

@@ -1,0 +1,24 @@
+{
+  "name": "@xesmona/games",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/engine.ts",
+    "./tic-tac-toe": "./src/tic-tac-toe/index.ts",
+    "./four-in-a-row": "./src/four-in-a-row/index.ts",
+    "./api": "./src/api.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@xesmona/config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,6 +1,6 @@
 # ADR 0007: Opening Mini Apps from chats
 
-- Status: accepted (2026-11-15); a second user's `chat_instance` (M6) and Android (M1) pending
+- Status: accepted (2026-11-15); M6 confirmed with two accounts in Phase 2; Android (M1) pending
 
 ## Context
 
@@ -36,9 +36,9 @@ Telegram opens a Mini App from those places and what it tells the app. Evidence 
 - `start_param` is covered by the signature, but it's only a lookup key: the server still
   checks that the validated user may see or play that game.
 - `chat_instance` in `initData` equals the one on callbacks from the same group, and doesn't
-  depend on the client (M6). It may be stored to tie a Mini App session to the chat of the
-  invitation, but it isn't an authorization check: it changes when a basic group is upgraded
-  to a supergroup (M6) and a second user's value is still unconfirmed.
+  depend on the client or the user: two accounts got the same value for the same chat (M6).
+  It may be stored to tie a Mini App session to the chat of the invitation, but it isn't an
+  authorization check: it changes when a basic group is upgraded to a supergroup (M6).
 - Opened from the private chat with the bot, `chat_type` is `sender` and there's no
   `start_param` (M2): the Mini App must handle having no game id (e.g. show a game list).
 
@@ -51,7 +51,6 @@ Telegram opens a Mini App from those places and what it tells the app. Evidence 
 
 ## Pending
 
-- M6 with account B: does a second user get the same `chat_instance` for the same group?
 - M1 on Android (no device yet).
 
 ## Consequences
@@ -59,6 +58,6 @@ Telegram opens a Mini App from those places and what it tells the app. Evidence 
 - Invitations for Mini App games are messages with a `url` button; the `BOT_<ID>_MINIAPP_URL`
   variable holds the direct link and handlers append `?startapp=<game id>`.
 - The Phase 2 endpoint that exchanges `initData` for a session token reuses the same
-  validation; the spike `POST /api/spike/whoami` and the Mini App test screen go away once M6
-  is closed.
+  validation (ADR 0009); the spike `POST /api/spike/whoami` and the Mini App test screen are
+  gone.
 - A game row must keep its chat, topic and message ids, since the Mini App can't supply them.

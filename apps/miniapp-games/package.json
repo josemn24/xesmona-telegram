@@ -21,7 +21,10 @@
     "vite": "^8.3.8"
   },
   "dependencies": {
+    "@supabase/supabase-js": "catalog:",
     "@tma.js/sdk-react": "^3.0.23",
+    "@xesmona/games": "workspace:*",
+    "motion": "^14.14.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   }

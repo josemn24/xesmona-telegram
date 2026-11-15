@@ -101,14 +101,17 @@ reply and saves both moves before editing the message once.
 
 0. **Technical tests:** inline keyboards and message edits in groups and in inline mode; direct
    link to the Mini App in groups. Outcome: ADRs. _Mostly done: in-chat games (ADR 0006),
-   opening Mini Apps (ADR 0007) and rate limits (ADR 0008). Still open: G6, I4, M6 with a
-   second account, Android._
+   opening Mini Apps (ADR 0007) and rate limits (ADR 0008). Still open: G6, I4,
+   Android._
 1. **Tic-tac-toe in the chat, end to end:** `/play`, inline mode, moves persisted with
    versions, rematch, and play vs bot (3 levels). _Done (2026-11-15): two-player games,
    outsider and simultaneous taps confirmed with two accounts (ADR 0006)._
 2. **Four in a row as a Mini App:** full pipeline (`initData` → JWT → private channel with RLS
    → Realtime), result posted in the group, and play vs bot (simple search). First version of
-   `GameEngine`.
+   `GameEngine`. _Built (2026-11-15, ADR 0009): `/four` and inline invitations, the Mini App
+   board, live updates, vs bot at 3 levels. Played in Telegram with two accounts (inline
+   invitation, live updates on iOS and macOS, one result edit, rematch) and vs the Normal
+   bot. Still to try: Easy and Hard, a two-player `/four` in a group, Android._
 3. **Reliability:** Telegram limits when editing messages, simultaneous taps, reconnection in
    the Mini App, abandoned and expired games, queues.
 4. **Walls for 2 players:** wall placement, path validation, jumps. Settles `GameEngine`.

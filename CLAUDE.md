@@ -15,10 +15,13 @@ Monorepo of Xesmona Telegram bots and Mini Apps. Vision, stack and roadmap in
 
 ## Structure
 
-- `apps/server`: the only Node process. Hono API, `/webhook/<botId>` webhooks, bot registry
-  (`src/bots.ts`), Mini App static files at `/apps/<name>/`.
+- `apps/server`: the only Node process. Hono API, `/webhook/<botId>` webhooks, each bot's
+  Mini App API at `/api/<botId>`, bot registry (`src/bots.ts`), Mini App static files at
+  `/apps/<name>/`.
 - `apps/bot-<id>`: each bot's definition (`defineBot`); starts no processes.
 - `apps/miniapp-<name>`: Vite + React + Tailwind + `@tma.js/sdk-react` SPA.
+- `packages/games`: pure game engines (`GameEngine`, tic-tac-toe, Four in a row) and the
+  games API types, shared by the server and the Mini Apps.
 - `packages/contracts`: Zod env schemas, `BotDefinition` and shared contracts.
 - `packages/telegram-auth`: `initData` validation (+ `./testing` with `signInitData`).
 - `packages/config`: shared tsconfigs.

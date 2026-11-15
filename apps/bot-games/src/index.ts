@@ -1,7 +1,9 @@
 import { defineBot } from '@xesmona/contracts';
 import { InlineKeyboard } from 'grammy';
-import { registerSpikes, spikeHelp } from './spikes';
-import { registerTicTacToe } from './tic-tac-toe/handlers';
+import { gamesApi } from './api';
+import { fourInARowInlineResults, registerFourInARow } from './four-in-a-row/handlers';
+import { displayName, upsertUser } from './games/store';
+import { registerTicTacToe, ticTacToeInlineResults } from './tic-tac-toe/handlers';
 
 export const gamesBot = defineBot({
   id: 'games',
@@ -11,6 +13,7 @@ export const gamesBot = defineBot({
       const text =
         "Hi! I'm the Xesmona games bot.\n\n" +
         '/play: tic-tac-toe here, against a friend or against me\n' +
+        (config.MINIAPP_URL ? '/four: Four in a row in the Mini App\n' : '') +
         'Or type @' +
         ctx.me.username +
         ' in any chat to send a game there.';
@@ -24,11 +27,22 @@ export const gamesBot = defineBot({
 
     bot.command('ping', (ctx) => ctx.reply('pong 🏓'));
 
-    // Phase 0 spike tools still needed for the Mini App (M1–M6) and rate-limit (R1) tests.
-    // Registered first: its inline handler only takes "@bot burst…" queries.
-    bot.command('spikes', (ctx) => ctx.reply(spikeHelp));
-    registerSpikes(bot, config);
+    // One inline answer for every game: Telegram uses the first answer only.
+    bot.on('inline_query', async (ctx) => {
+      await upsertUser(db, ctx.from);
+      const name = displayName(ctx.from);
+      await ctx.answerInlineQuery(
+        [
+          ...ticTacToeInlineResults(name, ctx.from.id),
+          ...fourInARowInlineResults(name, ctx.from.id, config.MINIAPP_URL),
+        ],
+        // Buttons carry the sender's id, so results can't be shared between users.
+        { cache_time: 0, is_personal: true },
+      );
+    });
 
     registerTicTacToe(bot, db, 'games');
+    registerFourInARow(bot, db, 'games', config.MINIAPP_URL);
   },
+  api: gamesApi,
 });

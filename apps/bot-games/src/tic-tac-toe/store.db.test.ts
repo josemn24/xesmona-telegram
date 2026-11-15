@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@xesmona/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { initialState } from './engine';
+import { initialState } from '@xesmona/games/tic-tac-toe';
 import {
   BOT_PLAYER_NAME,
   createGame,

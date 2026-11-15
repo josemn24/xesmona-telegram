@@ -10,6 +10,10 @@ export const serverEnvSchema = z
     BOT_MODE: z.enum(['polling', 'webhook']).default('polling'),
     SUPABASE_URL: z.url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    /** Public key the Mini Apps use for Supabase Realtime (`supabase status`: Publishable). */
+    SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
+    /** Secret that signs the Mini App players' Supabase JWTs (ADR 0009). Server only. */
+    SUPABASE_JWT_SECRET: z.string().min(32).optional(),
   })
   .refine((env) => env.BOT_MODE !== 'webhook' || env.PUBLIC_URL, {
     message: 'PUBLIC_URL is required when BOT_MODE=webhook',
