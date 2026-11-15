@@ -63,6 +63,16 @@ Add one line each; promote to a section when someone commits to it.
   current engine contract doesn't have.
 - Hangman or word games: single secret, may suit chat.
 
+## Single-player puzzles
+
+- **Status:** idea (Wordle-style word games, Queens- and Zip-style puzzles)
+- **Where:** a separate bot, not `games`, decided in
+  [ADR 0011](../adr/0011-separate-bot-for-single-player-games.md).
+- They aren't duels: no seats, turns or vs bot, so they don't implement `GameEngine`. They need
+  a puzzle generator with unique solutions, a daily puzzle and time rankings.
+- The names "Queens" and "Zip" belong to LinkedIn; use original names.
+- A social race variant (same puzzle, first to solve) would change the ADR's conclusion.
+
 ## What new games teach the engine
 
 | Game           | Stresses in `GameEngine`                         |

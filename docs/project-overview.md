@@ -124,7 +124,9 @@ reply and saves both moves before editing the message once.
    check in a real group, the reconnect check on devices._
 4. **Walls for 2 players:** wall placement, path validation, jumps. Settles `GameEngine`.
    Walls vs bot comes after the 2-player version works.
-5. **Second bot or module (e.g. polls):** the module SDK is extracted.
+5. **Second bot or module (e.g. polls, or single-player puzzles in their own bot,
+   [ADR 0011](adr/0011-separate-bot-for-single-player-games.md)):** the module SDK is
+   extracted.
 6. **Walls for 4 players, original dice game and rankings.**
 
 **Backlog:** chess.
