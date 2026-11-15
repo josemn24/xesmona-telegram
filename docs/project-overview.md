@@ -100,8 +100,9 @@ reply and saves both moves before editing the message once.
 ## Roadmap
 
 0. **Technical tests:** inline keyboards and message edits in groups and in inline mode; direct
-   link to the Mini App in groups. Outcome: ADRs. _In-chat part done (ADR 0006); Mini App and
-   rate-limit tests pending._
+   link to the Mini App in groups. Outcome: ADRs. _Mostly done: in-chat games (ADR 0006),
+   opening Mini Apps (ADR 0007) and rate limits (ADR 0008). Still open: G6, I4, M6 with a
+   second account, Android._
 1. **Tic-tac-toe in the chat, end to end:** `/play`, inline mode, moves persisted with
    versions, rematch, and play vs bot (3 levels). _Done (2026-11-15): two-player games,
    outsider and simultaneous taps confirmed with two accounts (ADR 0006)._
