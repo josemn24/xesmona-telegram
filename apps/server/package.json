@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.8",
+    "@supabase/supabase-js": "catalog:",
     "@xesmona/bot-games": "workspace:*",
     "@xesmona/contracts": "workspace:*",
     "@xesmona/telegram-auth": "workspace:*",

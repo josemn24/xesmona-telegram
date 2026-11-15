@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 type Health = { ok: boolean; bots: string[] } | 'error' | 'loading';
 
-// Phase 0 spike: remove in Phase 1.
+// Phase 0 spike: remove once the Mini App tests (M1–M6) are done.
 type Whoami =
   { ok: true; user: { first_name: string; id: number } } | { ok: false; code: string } | 'loading';
 

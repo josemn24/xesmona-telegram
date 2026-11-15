@@ -100,9 +100,11 @@ reply and saves both moves before editing the message once.
 ## Roadmap
 
 0. **Technical tests:** inline keyboards and message edits in groups and in inline mode; direct
-   link to the Mini App in groups. Outcome: ADRs.
+   link to the Mini App in groups. Outcome: ADRs. _In-chat part done (ADR 0006); Mini App and
+   rate-limit tests pending._
 1. **Tic-tac-toe in the chat, end to end:** `/play`, inline mode, moves persisted with
-   versions, rematch, and play vs bot (3 levels).
+   versions, rematch, and play vs bot (3 levels). _Built; two-player checks pending a second
+   account._
 2. **Four in a row as a Mini App:** full pipeline (`initData` → JWT → private channel with RLS
    → Realtime), result posted in the group, and play vs bot (simple search). First version of
    `GameEngine`.

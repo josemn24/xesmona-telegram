@@ -1,4 +1,4 @@
-// Phase 0 spike: remove in Phase 1.
+// Phase 0 spike: remove once the Mini App tests (M1–M6) are done.
 import { signInitData } from '@xesmona/telegram-auth/testing';
 import { describe, expect, it } from 'vitest';
 import { spikeRoutes } from './spike-routes';

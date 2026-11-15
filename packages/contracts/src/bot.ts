@@ -1,5 +1,15 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Bot } from 'grammy';
+import type { Database } from './database.types';
 import type { BotEnv } from './env';
+
+/** Typed Supabase client (service role: server only). */
+export type Db = SupabaseClient<Database>;
+
+/** Shared services the server creates once and gives to every bot. */
+export interface BotServices {
+  db: Db;
+}
 
 /**
  * Declarative bot definition. Each Xesmona bot lives in apps/bot-<id> and exports
@@ -9,7 +19,7 @@ export interface BotDefinition {
   /** Stable identifier: webhook route (/webhook/<id>) and env prefix (BOT_<ID>_). */
   id: string;
   description: string;
-  setup(bot: Bot, config: BotEnv): void;
+  setup(bot: Bot, config: BotEnv, services: BotServices): void;
 }
 
 export function defineBot(definition: BotDefinition): BotDefinition {

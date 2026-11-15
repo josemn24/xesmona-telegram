@@ -10,6 +10,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@supabase/supabase-js": "catalog:",
     "zod": "catalog:"
   },
   "peerDependencies": {

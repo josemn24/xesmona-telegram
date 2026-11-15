@@ -10,6 +10,7 @@ Monorepo of Xesmona Telegram bots and Mini Apps. Vision, stack and roadmap in
 - `pnpm check`: lint + typecheck + test + build (same as CI).
 - `pnpm --filter <package> <script>`: a single workspace, e.g. `pnpm --filter @xesmona/telegram-auth test`.
 - `pnpm db:start | db:reset | db:types`: local Supabase (requires Docker).
+- `pnpm db:diff <name>`: generate a migration from `supabase/schemas/` (declarative schemas).
 - `pnpm format`: Prettier.
 
 ## Structure
@@ -21,7 +22,8 @@ Monorepo of Xesmona Telegram bots and Mini Apps. Vision, stack and roadmap in
 - `packages/contracts`: Zod env schemas, `BotDefinition` and shared contracts.
 - `packages/telegram-auth`: `initData` validation (+ `./testing` with `signInitData`).
 - `packages/config`: shared tsconfigs.
-- `supabase/`: versioned SQL migrations and seed.
+- `supabase/schemas/`: declarative schema, the source of truth for the database.
+- `supabase/migrations/`: migrations generated from it; `supabase/seed.sql`: seed data.
 
 ## Rules
 
@@ -31,6 +33,9 @@ Monorepo of Xesmona Telegram bots and Mini Apps. Vision, stack and roadmap in
 - In groups, the Mini App opens with `url` buttons + direct link, not `web_app` buttons.
 - Bot variables use the `BOT_<ID>_` prefix; document any new variable in `.env.example`.
 - Secrets only on the server and never in git.
+- Database changes: edit `supabase/schemas/`, run `pnpm db:diff <name>`, review the SQL, then
+  `pnpm db:reset` and `pnpm db:types`. Don't hand-edit generated migrations; what `db diff`
+  can't express (e.g. function privileges) goes in a hand-written migration that says why.
 - Relative imports without extension; internal packages as `@xesmona/<name>`.
 - Code, comments, logs and docs in English.
 - User-facing texts in English for now; when i18n arrives, use Telegram's `language_code`.

@@ -16,13 +16,25 @@ Xesmona Telegram bots and Mini Apps. Vision and architecture in
 corepack enable
 pnpm install
 cp .env.example .env   # fill in BOT_GAMES_TOKEN
-pnpm db:start          # optional: local Supabase
+pnpm db:start          # local Supabase; copy its URL and service_role key into .env
+pnpm db:reset          # applies migrations and seed
 pnpm dev
 ```
 
 - Server: http://localhost:3000/health
 - Mini App: http://localhost:5173/apps/games/ (outside Telegram the environment is mocked)
-- Send `/ping` to the bot in Telegram: it replies `pong`.
+- Send `/ping` to the bot in Telegram: it replies `pong`. `/play` starts a tic-tac-toe game.
+
+## Database changes
+
+The schema lives in `supabase/schemas/` (declarative schemas). To change it:
+
+1. Edit the files in `supabase/schemas/`.
+2. `pnpm db:diff <name>` generates `supabase/migrations/<timestamp>_<name>.sql`; review it.
+3. `pnpm db:reset` applies it locally and `pnpm db:types` regenerates the TypeScript types.
+
+`db diff` doesn't capture everything (e.g. function privileges): add those as a hand-written
+migration explaining why.
 
 ## Testing the Mini App inside Telegram
 
@@ -38,14 +50,15 @@ cloudflared tunnel --url http://localhost:5173
 
 ## Scripts
 
-| Script                      | What it does                                  |
-| --------------------------- | --------------------------------------------- |
-| `pnpm dev`                  | Server + Mini App in development mode         |
-| `pnpm check`                | Lint, typecheck, tests and build (same as CI) |
-| `pnpm format`               | Formats with Prettier                         |
-| `pnpm db:start` / `db:stop` | Starts/stops local Supabase                   |
-| `pnpm db:reset`             | Recreates the DB applying migrations and seed |
-| `pnpm db:types`             | Generates TS types from the schema            |
+| Script                      | What it does                                   |
+| --------------------------- | ---------------------------------------------- |
+| `pnpm dev`                  | Server + Mini App in development mode          |
+| `pnpm check`                | Lint, typecheck, tests and build (same as CI)  |
+| `pnpm format`               | Formats with Prettier                          |
+| `pnpm db:start` / `db:stop` | Starts/stops local Supabase                    |
+| `pnpm db:reset`             | Recreates the DB applying migrations and seed  |
+| `pnpm db:diff <name>`       | Generates a migration from `supabase/schemas/` |
+| `pnpm db:types`             | Generates TS types from the schema             |
 
 ## Deployment (pending)
 

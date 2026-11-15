@@ -1,4 +1,4 @@
-// Phase 0 spike: remove in Phase 1.
+// Phase 0 spike: remove once the Mini App tests (M1–M6) are done.
 // Lets the Mini App check that the initData Telegram gives it (opened from a group via a
 // direct link) is verifiable on the server. Results go in docs/spikes/phase-0-results.md.
 import { InitDataError, validateInitData } from '@xesmona/telegram-auth';

@@ -1,6 +1,6 @@
 # ADR 0006: In-chat games with inline keyboards
 
-- Status: accepted (2026-11-14); two-player cases still to confirm (see Pending)
+- Status: accepted (2026-11-14); two-player cases confirmed on Phase 1 (2026-11-15)
 
 ## Context
 
@@ -36,7 +36,7 @@ ids (G1, I3…) refer to rows there.
   maximum 41 bytes with a 2-digit version, out of 64 (G2). Build it through one helper that
   checks the byte length.
 - Every move carries the game version. A tap with an old version gets a toast ("The board
-  changed"); a tap by someone who isn't playing gets an alert pop-up (G3, partly confirmed).
+  changed"); a tap by someone who isn't playing gets an alert pop-up (G3).
 - One edit per turn, also vs bot, where the bot's reply is saved with the human move (G2,
   ADR 0005). Edits work the same in private chats, groups, topics and inline messages
   (G2, G5, I3).
@@ -44,10 +44,10 @@ ids (G1, I3…) refer to rows there.
 
 ## Pending
 
-- Two-player games: Join by another user, outsider taps (G3) and simultaneous taps (G4) need a
-  second account. The version check is covered by unit tests; to be confirmed in Telegram when
-  account B is available.
-- Editing a message older than 48 hours (G6).
+- Two-player games, outsider taps and simultaneous taps were confirmed with a second account
+  on the Phase 1 game (G2, G3, G4, I1, I3).
+- Still open: an inline invitation in a group without the bot (I4) and editing a message older
+  than 48 hours (G6).
 - Edit rate limits (R1) go in ADR 0008.
 
 ## Consequences
