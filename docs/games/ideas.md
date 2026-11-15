@@ -65,7 +65,7 @@ Add one line each; promote to a section when someone commits to it.
 
 ## Single-player puzzles
 
-- **Status:** idea (Wordle-style word games, Queens- and Zip-style puzzles)
+- **Status:** idea. Catalogue and notes per puzzle in [puzzles.md](puzzles.md).
 - **Where:** a separate bot, not `games`, decided in
   [ADR 0011](../adr/0011-separate-bot-for-single-player-games.md).
 - They aren't duels: no seats, turns or vs bot, so they don't implement `GameEngine`. They need
