@@ -65,6 +65,13 @@ const clampBurst = (raw: string | undefined) =>
   Math.min(Math.max(Number.parseInt(raw ?? '', 10) || 30, 1), 200);
 
 export function registerSpikes(bot: Bot, config: BotEnv) {
+  // M6: log the chat_instance of every callback (including tic-tac-toe taps) to compare it
+  // with the one the Mini App gets from the same chat. Passes the update on untouched.
+  bot.on('callback_query', async (ctx, next) => {
+    logOrigin(`callback "${ctx.callbackQuery.data ?? ''}"`, ctx);
+    await next();
+  });
+
   // --- Inline burst (R1): only "@bot burst…" queries; the rest go to the real games.
   bot.inlineQuery(/^burst/i, async (ctx) => {
     logOrigin(`inline_query "${ctx.inlineQuery.query}"`, ctx);
