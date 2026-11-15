@@ -1,5 +1,5 @@
-import { initData, miniApp, useSignal } from '@tma.js/sdk-react';
-import { useEffect, useState } from 'react';
+import { initData, miniApp, retrieveLaunchParams, useSignal, viewport } from '@tma.js/sdk-react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Health = { ok: boolean; bots: string[] } | 'error' | 'loading';
 
@@ -16,6 +16,13 @@ export function App() {
   const isDark = useSignal(miniApp.isDark);
   const [health, setHealth] = useState<Health>('loading');
   const [whoami, setWhoami] = useState<Whoami>('loading');
+  // Phase 0 spike: which client and how the app opened (M1–M3 results are per platform).
+  const client = useMemo(() => {
+    const lp = retrieveLaunchParams();
+    return `${lp.tgWebAppPlatform} · Bot API ${lp.tgWebAppVersion}`;
+  }, []);
+  const viewportHeight = useSignal(viewport.height);
+  const isExpanded = useSignal(viewport.isExpanded);
 
   useEffect(() => {
     fetch('/health')
@@ -50,6 +57,13 @@ export function App() {
           <dd>{chatType ?? '—'}</dd>
           <dt className="text-tg-hint">chat_instance</dt>
           <dd className="break-all">{chatInstance ?? '—'}</dd>
+          <dt className="text-tg-hint">Client</dt>
+          <dd data-testid="client">{client}</dd>
+          <dt className="text-tg-hint">Viewport</dt>
+          <dd data-testid="viewport">
+            {viewportHeight ? `${Math.round(viewportHeight)}px` : '—'}
+            {isExpanded ? ' · expanded' : ' · not expanded'} · window {window.innerHeight}px
+          </dd>
           <dt className="text-tg-hint">Theme</dt>
           <dd>{isDark ? 'dark' : 'light'}</dd>
           <dt className="text-tg-hint">Server</dt>

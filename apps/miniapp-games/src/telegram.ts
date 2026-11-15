@@ -6,6 +6,7 @@ import {
   mockTelegramEnv,
   swipeBehavior,
   themeParams,
+  viewport,
 } from '@tma.js/sdk-react';
 
 /**
@@ -59,6 +60,14 @@ export async function initTelegram() {
   if (themeParams.mount.isAvailable()) {
     themeParams.mount();
     themeParams.bindCssVars();
+  }
+  // Viewport size and expanded state (games will size their boards from it). Not awaited:
+  // mounting asks Telegram for the size, which never answers in the mocked dev environment;
+  // the viewport signals update when it does.
+  if (viewport.mount.isAvailable()) {
+    void viewport.mount().catch((error: unknown) => {
+      console.warn('[miniapp] viewport mount failed', error);
+    });
   }
   // In games, prevent a vertical swipe from closing the Mini App by accident.
   if (swipeBehavior.mount.isAvailable()) {
