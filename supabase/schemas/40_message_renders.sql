@@ -75,7 +75,7 @@ end;
 $$;
 
 -- Only the server (service role) may call these. `db diff` ignores privileges, so these are
--- also applied by a hand-written migration (*_revoke_render_functions.sql): keep them in sync.
+-- also applied by the hand-written *_privileges_and_bootstrap_data.sql migration: keep them in sync.
 revoke execute on function public.enqueue_render from public, anon, authenticated;
 revoke execute on function public.claim_renders from public, anon, authenticated;
 revoke execute on function public.mark_rendered from public, anon, authenticated;

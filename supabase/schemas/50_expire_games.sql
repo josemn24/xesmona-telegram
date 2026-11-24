@@ -34,5 +34,5 @@ end;
 $$;
 
 -- Only the server (service role) may call this. `db diff` ignores privileges, so this is also
--- applied by a hand-written migration (*_revoke_expire_games.sql): keep them in sync.
+-- applied by the hand-written *_privileges_and_bootstrap_data.sql migration: keep them in sync.
 revoke execute on function public.expire_games from public, anon, authenticated;
