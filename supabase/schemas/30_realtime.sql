@@ -84,7 +84,7 @@ create policy "game players receive game broadcasts"
   );
 
 -- `db diff` ignores privileges, so these are also applied by the hand-written migration
--- (*_revoke_realtime_functions.sql): keep them in sync.
+-- (*_privileges_and_bootstrap_data.sql): keep them in sync.
 -- The trigger function is only for the trigger.
 revoke execute on function public.broadcast_game_change from public, anon, authenticated;
 -- The policy runs as `authenticated`, so it needs `is_game_player`; `anon` doesn't.

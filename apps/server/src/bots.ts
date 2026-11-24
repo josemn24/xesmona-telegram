@@ -18,6 +18,8 @@ export interface RunningBot {
   config: BotEnv;
   /** The bot's Mini App API, mounted at /api/<id>. */
   api?: Hono;
+  /** Starts the bot's background work; returns its stop function. */
+  start?: () => () => Promise<void>;
 }
 
 /** `getServices` is called only if at least one bot starts (it may exit when misconfigured). */
@@ -39,7 +41,10 @@ export function createBots(
     definition.setup(bot, config, services);
     bot.catch((err) => console.error(`[bot:${definition.id}]`, err.error));
     const api = definition.api?.(bot, config, services);
-    bots.push({ id: definition.id, bot, config, ...(api && { api }) });
+    const shared = services;
+    const { start: startWork } = definition;
+    const start = startWork && (() => startWork(bot, config, shared));
+    bots.push({ id: definition.id, bot, config, ...(api && { api }), ...(start && { start }) });
   }
   return bots;
 }

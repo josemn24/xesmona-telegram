@@ -32,6 +32,11 @@ export interface BotDefinition {
   setup(bot: Bot, config: BotEnv, services: BotServices): void;
   /** Optional HTTP API for the bot's Mini Apps, mounted by the server at /api/<id>. */
   api?(bot: Bot, config: BotEnv, services: BotServices): Hono;
+  /**
+   * Optional background work (queues, sweeps), started once the server is up. Returns a function
+   * that stops it; the server awaits it on shutdown.
+   */
+  start?(bot: Bot, config: BotEnv, services: BotServices): () => Promise<void>;
 }
 
 export function defineBot(definition: BotDefinition): BotDefinition {

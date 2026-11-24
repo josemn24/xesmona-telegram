@@ -1,7 +1,8 @@
 # xesmona-telegram
 
 Monorepo of Xesmona Telegram bots and Mini Apps. Vision, stack and roadmap in
-[docs/project-overview.md](docs/project-overview.md); decisions in [docs/adr/](docs/adr/).
+[docs/project-overview.md](docs/project-overview.md); games (implemented and planned) in
+[docs/games/](docs/games/README.md); decisions in [docs/adr/](docs/adr/).
 
 ## Commands
 

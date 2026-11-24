@@ -1,9 +1,25 @@
+import type { BotEnv } from '@xesmona/contracts';
 import { defineBot } from '@xesmona/contracts';
+import { fourInARow, type State as FourState } from '@xesmona/games/four-in-a-row';
+import { ticTacToe, type State as TicTacToeState } from '@xesmona/games/tic-tac-toe';
 import { InlineKeyboard } from 'grammy';
 import { gamesApi } from './api';
 import { fourInARowInlineResults, registerFourInARow } from './four-in-a-row/handlers';
-import { displayName, upsertUser } from './games/store';
+import { gameView as fourInARowView } from './four-in-a-row/text';
+import { startWorker, type GameViews } from './games/render';
+import { displayName, upsertUser, type Game } from './games/store';
 import { registerTicTacToe, ticTacToeInlineResults } from './tic-tac-toe/handlers';
+import { gameView as ticTacToeView } from './tic-tac-toe/text';
+
+/** How the render worker shows each game type (the store keeps states as engine JSON). */
+function gameViews({ MINIAPP_URL: miniAppUrl }: BotEnv): GameViews {
+  return {
+    [ticTacToe.type]: (game) => ticTacToeView(game as Game<TicTacToeState>),
+    [fourInARow.type]: miniAppUrl
+      ? (game) => fourInARowView(game as Game<FourState>, miniAppUrl)
+      : undefined,
+  };
+}
 
 export const gamesBot = defineBot({
   id: 'games',
@@ -45,4 +61,5 @@ export const gamesBot = defineBot({
     registerFourInARow(bot, db, 'games', config.MINIAPP_URL);
   },
   api: gamesApi,
+  start: (bot, config, { db }) => startWorker(bot.api, db, gameViews(config)),
 });

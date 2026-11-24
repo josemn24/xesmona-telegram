@@ -38,7 +38,11 @@ function signJwt(sub: number): string {
 }
 
 describe.skipIf(!url || !key)('game realtime (local database)', () => {
-  const db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  // Created in a hook: `skipIf` still runs this callback, and createClient throws without a URL.
+  let db: SupabaseClient<Database>;
+  beforeAll(() => {
+    db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  });
   let gameId = '';
 
   beforeAll(async () => {
@@ -108,32 +112,40 @@ describe.skipIf(!url || !key)('game realtime (local database)', () => {
         // Realtime refuses the join when the select policy denies it.
         expect(outsiderStatus).not.toBe('SUBSCRIBED');
 
-        const { data, error } = await db.rpc('save_game', {
-          p_game_id: gameId,
-          p_expected_version: 0,
-          p_state: { test: 1 },
-          p_status: 'playing',
-          p_round: 0,
-          p_moves: [{ seat: 0, move: { column: 3 } }],
-        });
-        if (error) throw error;
-        expect(data?.version).toBe(1);
+        // `SUBSCRIBED` only means the join was accepted: on a freshly started Realtime (CI) the
+        // listener for database broadcasts may not be attached yet and the first message is
+        // lost. Save new versions until one reaches the player.
+        let version = 0;
+        for (let attempt = 0; attempt < 5 && received.player?.length === 0; attempt++) {
+          const { data, error } = await db.rpc('save_game', {
+            p_game_id: gameId,
+            p_expected_version: version,
+            p_state: { test: version + 1 },
+            p_status: 'playing',
+            p_round: 0,
+            p_moves: [{ seat: 0, move: { column: 3 } }],
+          });
+          if (error) throw error;
+          version = data?.version ?? -1;
+          expect(version).toBe(attempt + 1);
 
-        const deadline = Date.now() + 5000;
-        while (received.player?.length === 0 && Date.now() < deadline) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          const deadline = Date.now() + 2000;
+          while (received.player?.length === 0 && Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
         }
-        expect(received.player).toEqual([
+        expect(received.player?.[0]).toEqual(
           expect.objectContaining({
-            version: 1,
-            state: { test: 1 },
+            version: expect.any(Number),
             status: 'playing',
             result: null,
             winner_seat: null,
             round: 0,
             mode: 'vs_bot',
           }),
-        ]);
+        );
+        const first = received.player?.[0] as { version: number; state: unknown };
+        expect(first.state).toEqual({ test: first.version });
         expect(received.outsider).toEqual([]);
       } finally {
         await Promise.all(clients.map((client) => client.removeAllChannels()));

@@ -20,7 +20,8 @@ export interface SnapshotPlayer {
 export interface GameSnapshot<State> {
   id: string;
   gameType: string;
-  status: 'waiting' | 'playing' | 'finished';
+  /** 'expired': abandoned, with no winner (ADR 0010). */
+  status: 'waiting' | 'playing' | 'finished' | 'expired';
   mode: Mode | null;
   botLevel: BotLevel | null;
   version: number;

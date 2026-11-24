@@ -2,6 +2,7 @@
 // Realtime, and optimistic moves with the shared engine. The server's answer always wins.
 import type { GameSnapshot } from '@xesmona/games/api';
 import { fourInARow, type State } from '@xesmona/games/four-in-a-row';
+import { on } from '@tma.js/sdk-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api } from '../api';
 import { subscribeToGame, type ChannelStatus } from '../realtime';
@@ -14,7 +15,19 @@ const ERRORS: Record<string, string> = {
   invalid_move: "You can't play there.",
   not_playing: 'The game is over.',
   offline: "Can't reach the server. Check your connection.",
+  not_found: 'This game no longer exists.',
 };
+
+const SESSION_EXPIRED = 'This game session expired. Close and reopen the game.';
+
+/** A message for the player; never the raw error code. */
+function messageFor(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+  // Every 401 comes from the initData check: expired (24 h max age), missing or invalid.
+  // Only reopening the Mini App gets Telegram to sign a fresh one.
+  if (error.status === 401) return SESSION_EXPIRED;
+  return ERRORS[error.code] ?? fallback;
+}
 
 export function useGame(gameId: string) {
   const [snapshot, setSnapshot] = useState<Snapshot>();
@@ -43,10 +56,10 @@ export function useGame(gameId: string) {
           setLoadError(undefined);
         },
         (error: unknown) => {
-          const code = error instanceof ApiError ? error.code : 'error';
-          setLoadError(
-            code === 'not_found' ? 'This game no longer exists.' : (ERRORS[code] ?? code),
-          );
+          const message = messageFor(error, 'Something went wrong. Try again.');
+          setLoadError(message);
+          // With a board on screen loadError isn't shown, and an expired session won't recover.
+          if (error instanceof ApiError && error.status === 401) setNotice(message);
         },
       ),
     [gameId],
@@ -80,13 +93,23 @@ export function useGame(gameId: string) {
         if (status === 'live') void refresh();
       },
     );
+    // Back from the background or a network drop: the broadcasts may have been missed.
     const onVisible = () => {
       if (document.visibilityState === 'visible') void refresh();
     };
+    const onOnline = () => void refresh();
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    // Telegram's `activated` event (`visibility_changed` in the SDK's bridge): desktop clients
+    // don't always fire visibilitychange when the Mini App is selected again.
+    const offActivated = on('visibility_changed', ({ is_visible }) => {
+      if (is_visible) void refresh();
+    });
     return () => {
       unsubscribe();
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+      offActivated();
     };
   }, [gameId, refresh]);
 
@@ -109,8 +132,7 @@ export function useGame(gameId: string) {
           }),
         );
       } catch (error) {
-        const code = error instanceof ApiError ? error.code : 'error';
-        setNotice(ERRORS[code] ?? 'Something went wrong. Try again.');
+        setNotice(messageFor(error, 'Something went wrong. Try again.'));
         await refresh();
       } finally {
         setSending(false);

@@ -106,7 +106,7 @@ export function fourInARowApi(db: Db, api: Api, miniAppUrl: string | undefined) 
 
     // The chat message only changes when the game ends (ADR 0008).
     if (played.game.status === 'finished' && miniAppUrl) {
-      await renderGameMessage(api, played.game, miniAppUrl);
+      await renderGameMessage(api, db, played.game, miniAppUrl);
     }
     return c.json(toSnapshot(played.game, c.var.user.id));
   });

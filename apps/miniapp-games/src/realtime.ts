@@ -49,9 +49,16 @@ async function getClient(): Promise<SupabaseClient> {
 
 export type ChannelStatus = 'connecting' | 'live' | 'offline';
 
+/** Backoff between our own rejoin attempts: 1 s, 2 s, 4 s… capped at 30 s. */
+const RETRY_MIN_MS = 1000;
+const RETRY_MAX_MS = 30 * 1000;
+
 /**
  * Listens to a game's broadcasts. `onStatus('live')` fires on every (re)subscribe, so the
  * caller can fetch a fresh snapshot for anything missed while offline. Returns an unsubscribe.
+ *
+ * When the channel closes, errors or times out we drop it and join a fresh one with capped
+ * exponential backoff (with a fresh token), instead of relying only on supabase-js's rejoin.
  */
 export function subscribeToGame<State>(
   gameId: string,
@@ -59,11 +66,34 @@ export function subscribeToGame<State>(
   onStatus: (status: ChannelStatus) => void,
 ): () => void {
   let stopped = false;
-  let unsubscribe = () => {};
-  onStatus('connecting');
+  let attempt = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  // Removes the current channel; resolves once supabase-js has forgotten it, since it hands
+  // back an existing channel with the same topic instead of creating a new one.
+  let removeCurrent: (() => Promise<unknown>) | undefined;
+  let removing: Promise<unknown> = Promise.resolve();
 
-  void (async () => {
+  const dropCurrent = () => {
+    const remove = removeCurrent;
+    removeCurrent = undefined;
+    if (remove) removing = remove().catch(() => {});
+  };
+
+  const scheduleRetry = () => {
+    if (stopped || retryTimer !== undefined) return;
+    dropCurrent();
+    const delay = Math.min(RETRY_MIN_MS * 2 ** attempt, RETRY_MAX_MS);
+    attempt += 1;
+    console.debug('[miniapp] realtime retry in', delay, 'ms', gameId);
+    retryTimer = setTimeout(() => {
+      retryTimer = undefined;
+      void connect();
+    }, delay);
+  };
+
+  async function connect() {
     try {
+      await removing;
       const supabase = await getClient();
       // Authorize before joining: otherwise the join uses the publishable key's (anon) claims.
       await supabase.realtime.setAuth((await getSession()).token);
@@ -74,21 +104,36 @@ export function subscribeToGame<State>(
           const update = payload as GameBroadcast<State>;
           console.debug('[miniapp] realtime update', gameId, update.version);
           onBroadcast(update);
-        })
-        .subscribe((status, error) => {
-          console.debug('[miniapp] realtime', gameId, status, error?.message ?? '');
-          if (stopped) return;
-          onStatus(status === 'SUBSCRIBED' ? 'live' : 'offline');
         });
-      unsubscribe = () => void supabase.removeChannel(channel);
+      const remove = () => supabase.removeChannel(channel);
+      removeCurrent = remove;
+      channel.subscribe((status, error) => {
+        console.debug('[miniapp] realtime', gameId, status, error?.message ?? '');
+        // Ignore a channel we already dropped (removing it reports CLOSED).
+        if (stopped || removeCurrent !== remove) return;
+        if (status === 'SUBSCRIBED') {
+          attempt = 0;
+          onStatus('live');
+          return;
+        }
+        // CLOSED, CHANNEL_ERROR or TIMED_OUT.
+        onStatus('offline');
+        scheduleRetry();
+      });
     } catch (error) {
       console.warn('[miniapp] realtime unavailable', error);
-      if (!stopped) onStatus('offline');
+      if (stopped) return;
+      onStatus('offline');
+      scheduleRetry();
     }
-  })();
+  }
+
+  onStatus('connecting');
+  void connect();
 
   return () => {
     stopped = true;
-    unsubscribe();
+    clearTimeout(retryTimer);
+    dropCurrent();
   };
 }

@@ -1,4 +1,14 @@
 
+  create table "public"."bots" (
+    "id" text not null,
+    "description" text,
+    "created_at" timestamp with time zone not null default now()
+      );
+
+
+alter table "public"."bots" enable row level security;
+
+
   create table "public"."game_moves" (
     "game_id" uuid not null,
     "version" integer not null,
@@ -43,12 +53,24 @@ alter table "public"."game_players" enable row level security;
     "message_thread_id" integer,
     "inline_message_id" text,
     "chat_instance" text,
+    "rendered_version" integer,
     "created_at" timestamp with time zone not null default now(),
     "updated_at" timestamp with time zone not null default now()
       );
 
 
 alter table "public"."games" enable row level security;
+
+
+  create table "public"."message_renders" (
+    "game_id" uuid not null,
+    "not_before" timestamp with time zone not null default now(),
+    "attempts" integer not null default 0,
+    "created_at" timestamp with time zone not null default now()
+      );
+
+
+alter table "public"."message_renders" enable row level security;
 
 
   create table "public"."telegram_users" (
@@ -62,6 +84,8 @@ alter table "public"."games" enable row level security;
 
 
 alter table "public"."telegram_users" enable row level security;
+
+CREATE UNIQUE INDEX bots_pkey ON public.bots USING btree (id);
 
 CREATE UNIQUE INDEX game_moves_pkey ON public.game_moves USING btree (game_id, version);
 
@@ -79,7 +103,13 @@ CREATE UNIQUE INDEX games_inline_message_idx ON public.games USING btree (bot_id
 
 CREATE UNIQUE INDEX games_pkey ON public.games USING btree (id);
 
+CREATE INDEX message_renders_not_before_idx ON public.message_renders USING btree (not_before);
+
+CREATE UNIQUE INDEX message_renders_pkey ON public.message_renders USING btree (game_id);
+
 CREATE UNIQUE INDEX telegram_users_pkey ON public.telegram_users USING btree (id);
+
+alter table "public"."bots" add constraint "bots_pkey" PRIMARY KEY using index "bots_pkey";
 
 alter table "public"."game_moves" add constraint "game_moves_pkey" PRIMARY KEY using index "game_moves_pkey";
 
@@ -87,7 +117,13 @@ alter table "public"."game_players" add constraint "game_players_pkey" PRIMARY K
 
 alter table "public"."games" add constraint "games_pkey" PRIMARY KEY using index "games_pkey";
 
+alter table "public"."message_renders" add constraint "message_renders_pkey" PRIMARY KEY using index "message_renders_pkey";
+
 alter table "public"."telegram_users" add constraint "telegram_users_pkey" PRIMARY KEY using index "telegram_users_pkey";
+
+alter table "public"."bots" add constraint "bots_id_check" CHECK ((id ~ '^[a-z][a-z0-9-]*$'::text)) not valid;
+
+alter table "public"."bots" validate constraint "bots_id_check";
 
 alter table "public"."game_moves" add constraint "game_moves_game_id_fkey" FOREIGN KEY (game_id) REFERENCES public.games(id) ON DELETE CASCADE not valid;
 
@@ -135,7 +171,7 @@ alter table "public"."games" add constraint "games_created_by_fkey" FOREIGN KEY 
 
 alter table "public"."games" validate constraint "games_created_by_fkey";
 
-alter table "public"."games" add constraint "games_game_type_check" CHECK ((game_type = 'tic-tac-toe'::text)) not valid;
+alter table "public"."games" add constraint "games_game_type_check" CHECK ((game_type = ANY (ARRAY['tic-tac-toe'::text, 'four-in-a-row'::text]))) not valid;
 
 alter table "public"."games" validate constraint "games_game_type_check";
 
@@ -147,7 +183,7 @@ alter table "public"."games" add constraint "games_mode_check" CHECK ((mode = AN
 
 alter table "public"."games" validate constraint "games_mode_check";
 
-alter table "public"."games" add constraint "games_mode_once_started" CHECK (((status = 'waiting'::text) OR (mode IS NOT NULL))) not valid;
+alter table "public"."games" add constraint "games_mode_once_started" CHECK (((status = ANY (ARRAY['waiting'::text, 'expired'::text])) OR (mode IS NOT NULL))) not valid;
 
 alter table "public"."games" validate constraint "games_mode_once_started";
 
@@ -163,7 +199,7 @@ alter table "public"."games" add constraint "games_single_message_ref" CHECK ((N
 
 alter table "public"."games" validate constraint "games_single_message_ref";
 
-alter table "public"."games" add constraint "games_status_check" CHECK ((status = ANY (ARRAY['waiting'::text, 'playing'::text, 'finished'::text]))) not valid;
+alter table "public"."games" add constraint "games_status_check" CHECK ((status = ANY (ARRAY['waiting'::text, 'playing'::text, 'finished'::text, 'expired'::text]))) not valid;
 
 alter table "public"."games" validate constraint "games_status_check";
 
@@ -178,6 +214,10 @@ alter table "public"."games" validate constraint "games_winner_only_on_win";
 alter table "public"."games" add constraint "games_winner_seat_check" CHECK ((winner_seat = ANY (ARRAY[0, 1]))) not valid;
 
 alter table "public"."games" validate constraint "games_winner_seat_check";
+
+alter table "public"."message_renders" add constraint "message_renders_game_id_fkey" FOREIGN KEY (game_id) REFERENCES public.games(id) ON DELETE CASCADE not valid;
+
+alter table "public"."message_renders" validate constraint "message_renders_game_id_fkey";
 
 set check_function_bodies = off;
 
@@ -202,6 +242,53 @@ begin
   end if;
   return v_game;
 end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.broadcast_game_change()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  perform realtime.send(
+    jsonb_build_object(
+      'version', new.version,
+      'state', new.state,
+      'status', new.status,
+      'result', new.result,
+      'winner_seat', new.winner_seat,
+      'round', new.round,
+      'mode', new.mode
+    ),
+    'game',
+    'game:' || new.id::text,
+    true
+  );
+  return null;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.claim_renders(p_limit integer DEFAULT 20, p_lease_seconds integer DEFAULT 30)
+ RETURNS SETOF public.message_renders
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+  with due as (
+    select game_id
+    from public.message_renders
+    where not_before <= now()
+    order by not_before
+    limit p_limit
+    for update skip locked
+  )
+  update public.message_renders as r
+  set not_before = now() + make_interval(secs => p_lease_seconds), attempts = r.attempts + 1
+  from due
+  where r.game_id = due.game_id
+  returning r.*;
 $function$
 ;
 
@@ -238,6 +325,58 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.enqueue_render(p_game_id uuid, p_delay_seconds integer DEFAULT 0)
+ RETURNS void
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+  insert into public.message_renders (game_id, not_before)
+  values (p_game_id, now() + make_interval(secs => greatest(p_delay_seconds, 0)))
+  on conflict (game_id) do update
+  set not_before = greatest(public.message_renders.not_before, excluded.not_before);
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.expire_games(p_waiting interval DEFAULT '24:00:00'::interval, p_idle interval DEFAULT '7 days'::interval)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare
+  v_count integer;
+begin
+  with expired as (
+    update public.games
+    set status = 'expired', version = version + 1, updated_at = now()
+    where (status = 'waiting' and updated_at < now() - p_waiting)
+      or (status = 'playing' and updated_at < now() - p_idle)
+    returning id, chat_id, inline_message_id
+  ),
+  queued as (
+    insert into public.message_renders (game_id)
+    select id from expired where chat_id is not null or inline_message_id is not null
+    on conflict (game_id) do nothing
+  )
+  select count(*) into v_count from expired;
+  return v_count;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.is_game_player(p_game_id uuid, p_user_id bigint)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select exists (
+    select 1
+    from public.game_players
+    where game_id = p_game_id and telegram_user_id = p_user_id
+  );
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.join_game(p_game_id uuid, p_expected_version integer, p_telegram_user_id bigint, p_display_name text, p_state jsonb)
  RETURNS public.games
  LANGUAGE plpgsql
@@ -260,6 +399,26 @@ begin
   values (p_game_id, 1, 'human', p_telegram_user_id, p_display_name);
 
   return v_game;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.mark_rendered(p_game_id uuid, p_version integer)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare
+  v_game public.games;
+begin
+  update public.games
+  set rendered_version = greatest(coalesce(rendered_version, -1), p_version)
+  where id = p_game_id
+  returning * into v_game;
+
+  if found and v_game.rendered_version >= v_game.version then
+    delete from public.message_renders where game_id = p_game_id;
+  end if;
 end;
 $function$
 ;
@@ -318,6 +477,48 @@ begin
 end;
 $function$
 ;
+
+grant delete on table "public"."bots" to "anon";
+
+grant insert on table "public"."bots" to "anon";
+
+grant references on table "public"."bots" to "anon";
+
+grant select on table "public"."bots" to "anon";
+
+grant trigger on table "public"."bots" to "anon";
+
+grant truncate on table "public"."bots" to "anon";
+
+grant update on table "public"."bots" to "anon";
+
+grant delete on table "public"."bots" to "authenticated";
+
+grant insert on table "public"."bots" to "authenticated";
+
+grant references on table "public"."bots" to "authenticated";
+
+grant select on table "public"."bots" to "authenticated";
+
+grant trigger on table "public"."bots" to "authenticated";
+
+grant truncate on table "public"."bots" to "authenticated";
+
+grant update on table "public"."bots" to "authenticated";
+
+grant delete on table "public"."bots" to "service_role";
+
+grant insert on table "public"."bots" to "service_role";
+
+grant references on table "public"."bots" to "service_role";
+
+grant select on table "public"."bots" to "service_role";
+
+grant trigger on table "public"."bots" to "service_role";
+
+grant truncate on table "public"."bots" to "service_role";
+
+grant update on table "public"."bots" to "service_role";
 
 grant delete on table "public"."game_moves" to "anon";
 
@@ -445,6 +646,48 @@ grant truncate on table "public"."games" to "service_role";
 
 grant update on table "public"."games" to "service_role";
 
+grant delete on table "public"."message_renders" to "anon";
+
+grant insert on table "public"."message_renders" to "anon";
+
+grant references on table "public"."message_renders" to "anon";
+
+grant select on table "public"."message_renders" to "anon";
+
+grant trigger on table "public"."message_renders" to "anon";
+
+grant truncate on table "public"."message_renders" to "anon";
+
+grant update on table "public"."message_renders" to "anon";
+
+grant delete on table "public"."message_renders" to "authenticated";
+
+grant insert on table "public"."message_renders" to "authenticated";
+
+grant references on table "public"."message_renders" to "authenticated";
+
+grant select on table "public"."message_renders" to "authenticated";
+
+grant trigger on table "public"."message_renders" to "authenticated";
+
+grant truncate on table "public"."message_renders" to "authenticated";
+
+grant update on table "public"."message_renders" to "authenticated";
+
+grant delete on table "public"."message_renders" to "service_role";
+
+grant insert on table "public"."message_renders" to "service_role";
+
+grant references on table "public"."message_renders" to "service_role";
+
+grant select on table "public"."message_renders" to "service_role";
+
+grant trigger on table "public"."message_renders" to "service_role";
+
+grant truncate on table "public"."message_renders" to "service_role";
+
+grant update on table "public"."message_renders" to "service_role";
+
 grant delete on table "public"."telegram_users" to "anon";
 
 grant insert on table "public"."telegram_users" to "anon";
@@ -486,5 +729,20 @@ grant trigger on table "public"."telegram_users" to "service_role";
 grant truncate on table "public"."telegram_users" to "service_role";
 
 grant update on table "public"."telegram_users" to "service_role";
+
+CREATE TRIGGER games_broadcast_change AFTER UPDATE ON public.games FOR EACH ROW WHEN ((new.version IS DISTINCT FROM old.version)) EXECUTE FUNCTION public.broadcast_game_change();
+
+
+  create policy "game players receive game broadcasts"
+  on "realtime"."messages"
+  as permissive
+  for select
+  to authenticated
+using (((extension = 'broadcast'::text) AND
+CASE
+    WHEN ((length(realtime.topic()) = 41) AND (realtime.topic() ~ '^game:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'::text) AND ((length((auth.jwt() ->> 'sub'::text)) >= 1) AND (length((auth.jwt() ->> 'sub'::text)) <= 18)) AND ((auth.jwt() ->> 'sub'::text) !~ '[^0-9]'::text)) THEN public.is_game_player((split_part(realtime.topic(), ':'::text, 2))::uuid, ((auth.jwt() ->> 'sub'::text))::bigint)
+    ELSE false
+END));
+
 
 

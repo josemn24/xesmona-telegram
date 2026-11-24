@@ -36,3 +36,51 @@ jobs:
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm turbo run typecheck test build
+
+  # The *.db.test.ts suites skip without a database; this job runs them against a local
+  # Supabase started from supabase/migrations (the same SQL `supabase db push` applies in prod).
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable corepack (pnpm from packageManager)
+        run: corepack enable
+
+      - name: Get pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.84.2
+
+      # Only what the tests use: Postgres, PostgREST, Realtime and the gateway.
+      - name: Start Supabase
+        run: >
+          supabase start
+          -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,storage-api,postgres-meta
+
+      - name: Write .env for the tests
+        run: |
+          supabase status -o env > supabase.env
+          set -a; . ./supabase.env; set +a
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_JWT_SECRET=$JWT_SECRET"
+          } > .env
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @xesmona/bot-games test

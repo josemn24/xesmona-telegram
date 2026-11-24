@@ -1,7 +1,7 @@
 // Runs against the local Supabase (`pnpm db:start`); skipped when it isn't configured (CI).
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@xesmona/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { initialState } from '@xesmona/games/tic-tac-toe';
@@ -25,7 +25,11 @@ const BEN = { id: 9_000_000_002, is_bot: false, first_name: 'Ben', username: 'be
 const CY = { id: 9_000_000_003, is_bot: false, first_name: 'Cy' };
 
 describe.skipIf(!url || !key)('tic-tac-toe store (local database)', () => {
-  const db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  // Created in a hook: `skipIf` still runs this callback, and createClient throws without a URL.
+  let db: SupabaseClient<Database>;
+  beforeAll(() => {
+    db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  });
   const created: string[] = [];
 
   async function newGame(input: Partial<Parameters<typeof createGame>[1]> = {}): Promise<Game> {

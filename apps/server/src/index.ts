@@ -23,6 +23,13 @@ for (const { id, api } of bots) {
   if (api) app.route(`/api/${id}`, api);
 }
 
+/**
+ * Webhook handlers must answer before this. On timeout we still answer 200 so Telegram doesn't
+ * redeliver the update: moves are protected by versions, but a redelivered `/play` or `/four`
+ * would post a second invitation. The handler keeps running and finishes in the background.
+ */
+const WEBHOOK_TIMEOUT_MS = 9_000;
+
 // Webhooks: one route per bot. grammY validates X-Telegram-Bot-Api-Secret-Token.
 if (env.BOT_MODE === 'webhook') {
   for (const { id, bot, config } of bots) {
@@ -32,7 +39,12 @@ if (env.BOT_MODE === 'webhook') {
     }
     app.post(
       `/webhook/${id}`,
-      webhookCallback(bot, 'hono', { secretToken: config.WEBHOOK_SECRET }),
+      webhookCallback(bot, 'hono', {
+        secretToken: config.WEBHOOK_SECRET,
+        timeoutMilliseconds: WEBHOOK_TIMEOUT_MS,
+        onTimeout: () =>
+          console.warn(`[bot:${id}] update took over ${WEBHOOK_TIMEOUT_MS} ms; answered 200`),
+      }),
     );
   }
 }
@@ -55,7 +67,10 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, ({ port }) => {
   console.log(`[server] listening on http://localhost:${port} (${env.BOT_MODE} mode)`);
 });
 
-for (const { id, bot, config } of bots) {
+const stops: (() => Promise<void>)[] = [];
+
+for (const { id, bot, config, start } of bots) {
+  if (start) stops.push(start());
   if (env.BOT_MODE === 'polling') {
     void bot.start({
       onStart: (me) => console.log(`[bot:${id}] @${me.username} running in long polling`),
@@ -70,6 +85,7 @@ for (const { id, bot, config } of bots) {
 async function shutdown(signal: string) {
   console.log(`[server] ${signal} received, shutting down…`);
   await Promise.all(bots.map(({ bot }) => (bot.isRunning() ? bot.stop() : undefined)));
+  await Promise.all(stops.map((stop) => stop()));
   server.close(() => process.exit(0));
 }
 process.once('SIGINT', () => void shutdown('SIGINT'));

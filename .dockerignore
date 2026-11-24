@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+coverage
+.env
+.env.*
+!.env.example
+supabase/.temp
+supabase/.branches
+.DS_Store
