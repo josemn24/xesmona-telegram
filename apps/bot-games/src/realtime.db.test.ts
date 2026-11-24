@@ -38,7 +38,11 @@ function signJwt(sub: number): string {
 }
 
 describe.skipIf(!url || !key)('game realtime (local database)', () => {
-  const db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  // Created in a hook: `skipIf` still runs this callback, and createClient throws without a URL.
+  let db: SupabaseClient<Database>;
+  beforeAll(() => {
+    db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  });
   let gameId = '';
 
   beforeAll(async () => {

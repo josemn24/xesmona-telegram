@@ -2,7 +2,7 @@
 // The games API end to end with signed initData (ADR 0007, ADR 0009).
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@xesmona/contracts';
 import type { GameSnapshot, SessionResponse } from '@xesmona/games/api';
 import { fourInARow, type State } from '@xesmona/games/four-in-a-row';
@@ -31,22 +31,29 @@ const BEN = { id: 9_000_000_032, first_name: 'Ben' };
 const CY = { id: 9_000_000_033, first_name: 'Cy' };
 
 describe.skipIf(!url || !key)('games API (local database)', () => {
-  const db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  // Created in a hook: `skipIf` still runs this callback, and createClient throws without a URL.
+  let db: SupabaseClient<Database>;
+  beforeAll(() => {
+    db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  });
   const editMessageText = vi.fn();
   const editMessageTextInline = vi.fn();
   const bot = { api: { editMessageText, editMessageTextInline } } as unknown as Bot;
-  const app = gamesApi(
-    bot,
-    { TOKEN, MINIAPP_URL },
-    {
-      db,
-      realtime: {
-        supabaseUrl: url ?? '',
-        publishableKey: 'sb_publishable_test',
-        jwtSecret: 'test-secret-with-at-least-32-characters!',
+  let app: ReturnType<typeof gamesApi>;
+  beforeAll(() => {
+    app = gamesApi(
+      bot,
+      { TOKEN, MINIAPP_URL },
+      {
+        db,
+        realtime: {
+          supabaseUrl: url ?? '',
+          publishableKey: 'sb_publishable_test',
+          jwtSecret: 'test-secret-with-at-least-32-characters!',
+        },
       },
-    },
-  );
+    );
+  });
   const created: string[] = [];
 
   const auth = (user: { id: number; first_name: string }, authDate?: Date) => ({

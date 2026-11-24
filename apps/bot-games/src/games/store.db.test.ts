@@ -2,7 +2,7 @@
 // The generic store with a game other than tic-tac-toe.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@xesmona/contracts';
 import { fourInARow, type State } from '@xesmona/games/four-in-a-row';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -16,7 +16,11 @@ const { SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key } = process.env;
 const ADA = { id: 9_000_000_021, first_name: 'Ada' };
 
 describe.skipIf(!url || !key)('game store with four in a row (local database)', () => {
-  const db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  // Created in a hook: `skipIf` still runs this callback, and createClient throws without a URL.
+  let db: SupabaseClient<Database>;
+  beforeAll(() => {
+    db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  });
   const created: string[] = [];
 
   beforeAll(() => upsertUser(db, ADA));

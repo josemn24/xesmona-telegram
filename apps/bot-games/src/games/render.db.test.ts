@@ -2,7 +2,7 @@
 // The message render queue and game expiry (ADR 0010), with a fake Telegram API.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@xesmona/contracts';
 import { ticTacToe, type State } from '@xesmona/games/tic-tac-toe';
 import { GrammyError, InlineKeyboard, type Api } from 'grammy';
@@ -62,7 +62,11 @@ function fakeApi(edit: () => Promise<unknown> = () => Promise.resolve(true)) {
 }
 
 describe.skipIf(!url || !key)('message renders (local database)', () => {
-  const db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  // Created in a hook: `skipIf` still runs this callback, and createClient throws without a URL.
+  let db: SupabaseClient<Database>;
+  beforeAll(() => {
+    db = createClient<Database>(url ?? '', key ?? '', { auth: { persistSession: false } });
+  });
   const created: string[] = [];
   let messageId = 1;
 
